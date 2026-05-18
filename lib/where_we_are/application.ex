@@ -11,8 +11,7 @@ defmodule WhereWeAre.Application do
       WhereWeAreWeb.Telemetry,
       {DNSCluster, query: Application.get_env(:where_we_are, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: WhereWeAre.PubSub},
-      # Start a worker by calling: WhereWeAre.Worker.start_link(arg)
-      # {WhereWeAre.Worker, arg},
+      {WhereWeAre.CalendarSync, Application.get_env(:where_we_are, WhereWeAre.CalendarSync, [])},
       # Start to serve requests, typically the last entry
       WhereWeAreWeb.Endpoint
     ]

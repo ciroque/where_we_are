@@ -50,7 +50,7 @@ defmodule WhereWeAre.MixProject do
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 0.26"},
       {:jason, "~> 1.2"},
-      {:caldav_client, "~> 0.1"},
+      {:caldav_client, "~> 2.0"},
       {:dns_cluster, "~> 0.1.1"},
       {:bandit, "~> 1.5"}
     ]

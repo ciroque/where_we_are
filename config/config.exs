@@ -10,6 +10,11 @@ import Config
 config :where_we_are,
   generators: [timestamp_type: :utc_datetime]
 
+config :where_we_are, WhereWeAre.CalendarSync,
+  client: WhereWeAre.CalendarSync.NoopClient,
+  poll_interval: :timer.minutes(10),
+  credentials: %{}
+
 # Configures the endpoint
 config :where_we_are, WhereWeAreWeb.Endpoint,
   url: [host: "localhost"],
