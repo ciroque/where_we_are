@@ -4,39 +4,68 @@ defmodule WhereWeAre.CalendarSync.CaldavClientTest do
   alias WhereWeAre.CalendarSync.CaldavClient
 
   defmodule FakeClient do
-    def fetch_events(caldav_client, config) do
-      send(config.test_pid, {:fetch_events, caldav_client})
-      {:ok, []}
+    def discover(caldav_client) do
+      send(Process.get(:test_pid), {:discover, caldav_client})
+      {:ok, :discovery_info}
+    end
+
+    def list_calendars(caldav_client, :discovery_info) do
+      send(Process.get(:test_pid), {:list_calendars, caldav_client})
+      {:ok, [%{url: "https://caldav.icloud.com/calendar/"}]}
+    end
+
+    def list_events(caldav_client, "https://caldav.icloud.com/calendar/") do
+      send(Process.get(:test_pid), {:list_events, caldav_client})
+      {:ok, [:event]}
     end
   end
 
-  test "connects to iCloud CalDAV with configured credentials" do
+  test "authenticates to CalDAV with configured credentials" do
+    Process.put(:test_pid, self())
+
     config = %{
-      apple_id: "person@example.com",
-      app_password: "app-specific-password",
-      test_pid: self(),
+      username: "person@example.com",
+      password: "app-specific-password",
       client: FakeClient
     }
 
-    assert {:ok, []} = CaldavClient.fetch_events(config)
+    assert :ok = CaldavClient.authenticate(config)
 
-    assert_receive {:fetch_events,
-                    %CalDAVClient.Client{
-                      server_url: "https://caldav.icloud.com",
-                      auth: %CalDAVClient.Auth.Basic{
-                        username: "person@example.com",
-                        password: "app-specific-password"
+    assert_receive {:discover,
+                    %CalDAVEx.Client{
+                      config: %CalDAVEx.Config{
+                        base_url: "https://caldav.icloud.com",
+                        auth: {:basic, "person@example.com", "app-specific-password"}
                       }
                     }}
   end
 
-  test "returns an error when apple id is missing" do
-    assert {:error, :missing_icloud_apple_id} =
-             CaldavClient.fetch_events(%{app_password: "app-specific-password", client: FakeClient})
+  test "fetch_events connects to CalDAV with configured credentials" do
+    Process.put(:test_pid, self())
+
+    config = %{
+      username: "person@example.com",
+      password: "app-specific-password",
+      client: FakeClient
+    }
+
+    assert {:ok, [:event]} = CaldavClient.fetch_events(config)
+
+    assert_receive {:discover, %CalDAVEx.Client{}}
+    assert_receive {:list_calendars, %CalDAVEx.Client{}}
+    assert_receive {:list_events, %CalDAVEx.Client{}}
   end
 
-  test "returns an error when app password is missing" do
-    assert {:error, :missing_icloud_app_password} =
-             CaldavClient.fetch_events(%{apple_id: "person@example.com", client: FakeClient})
+  test "returns an error when username is missing" do
+    assert {:error, :missing_caldav_username} =
+             CaldavClient.fetch_events(%{
+               password: "app-specific-password",
+               client: FakeClient
+             })
+  end
+
+  test "returns an error when password is missing" do
+    assert {:error, :missing_caldav_password} =
+             CaldavClient.fetch_events(%{username: "person@example.com", client: FakeClient})
   end
 end

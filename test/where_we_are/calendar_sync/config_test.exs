@@ -4,27 +4,27 @@ defmodule WhereWeAre.CalendarSync.ConfigTest do
   alias WhereWeAre.CalendarSync.Config
 
   setup do
-    original_apple_id = System.get_env("ICLOUD_APPLE_ID")
-    original_app_password = System.get_env("ICLOUD_APP_PASSWORD")
+    original_username = System.get_env("CALDAV_USERNAME")
+    original_password = System.get_env("CALDAV_PASSWORD")
 
     on_exit(fn ->
-      restore_env("ICLOUD_APPLE_ID", original_apple_id)
-      restore_env("ICLOUD_APP_PASSWORD", original_app_password)
+      restore_env("CALDAV_USERNAME", original_username)
+      restore_env("CALDAV_PASSWORD", original_password)
     end)
 
     :ok
   end
 
-  test "builds CalendarSync config from iCloud environment variables" do
-    System.put_env("ICLOUD_APPLE_ID", "person@example.com")
-    System.put_env("ICLOUD_APP_PASSWORD", "app-specific-password")
+  test "builds CalendarSync config from CalDAV environment variables" do
+    System.put_env("CALDAV_USERNAME", "person@example.com")
+    System.put_env("CALDAV_PASSWORD", "app-specific-password")
 
     assert Config.from_env() == [
              client: WhereWeAre.CalendarSync.CaldavClient,
              poll_interval: :timer.minutes(10),
              credentials: %{
-               apple_id: "person@example.com",
-               app_password: "app-specific-password"
+               username: "person@example.com",
+               password: "app-specific-password"
              }
            ]
   end

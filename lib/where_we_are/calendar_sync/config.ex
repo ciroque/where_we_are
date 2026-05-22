@@ -4,8 +4,9 @@ defmodule WhereWeAre.CalendarSync.Config do
       client: WhereWeAre.CalendarSync.CaldavClient,
       poll_interval: :timer.minutes(10),
       credentials: %{
-        apple_id: System.get_env("ICLOUD_APPLE_ID"),
-        app_password: System.get_env("ICLOUD_APP_PASSWORD")
+        username: System.get_env("CALDAV_USERNAME"),
+        password: System.get_env("CALDAV_PASSWORD"),
+        url: System.get_env("CALDAV_URL")
       }
     ]
   end

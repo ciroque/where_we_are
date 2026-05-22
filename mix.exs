@@ -46,11 +46,11 @@ defmodule WhereWeAre.MixProject do
        app: false,
        compile: false,
        depth: 1},
+      {:caldav_ex, "~> 0.1"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 0.26"},
       {:jason, "~> 1.2"},
-      {:caldav_client, "~> 2.0"},
       {:dns_cluster, "~> 0.1.1"},
       {:bandit, "~> 1.5"}
     ]

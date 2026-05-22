@@ -20,14 +20,14 @@ defmodule WhereWeAre.CalendarSyncTest do
          name: :calendar_sync_config_test,
          client: SuccessfulClient,
          poll_interval: :timer.minutes(10),
-         credentials: %{apple_id: "person@example.com", app_password: "app-specific-password"},
+         credentials: %{username: "person@example.com", password: "app-specific-password"},
          schedule?: false}
       )
 
     assert CalendarSync.state(pid) == %{
              client: SuccessfulClient,
              poll_interval: :timer.minutes(10),
-             credentials: %{apple_id: "person@example.com", app_password: "app-specific-password"},
+             credentials: %{username: "person@example.com", password: "app-specific-password"},
              last_sync: nil,
              last_error: nil,
              events: []
@@ -41,7 +41,7 @@ defmodule WhereWeAre.CalendarSyncTest do
          name: :calendar_sync_success_test,
          client: SuccessfulClient,
          poll_interval: :timer.minutes(10),
-         credentials: %{apple_id: "person@example.com", app_password: "app-specific-password"},
+         credentials: %{username: "person@example.com", password: "app-specific-password"},
          schedule?: false}
       )
 
@@ -61,7 +61,7 @@ defmodule WhereWeAre.CalendarSyncTest do
          name: :calendar_sync_failure_test,
          client: FailingClient,
          poll_interval: :timer.minutes(10),
-         credentials: %{apple_id: "person@example.com", app_password: "app-specific-password"},
+         credentials: %{username: "person@example.com", password: "app-specific-password"},
          initial_events: [%{id: "existing", title: "Existing Event"}],
          schedule?: false}
       )
