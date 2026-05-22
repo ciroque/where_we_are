@@ -28,6 +28,10 @@ defmodule WhereWeAre.CalendarSync do
     GenServer.call(server, :state)
   end
 
+  def list_calendars(server \\ __MODULE__) do
+    GenServer.call(server, :list_calendars)
+  end
+
   @impl true
   def init(opts) do
     state = %__MODULE__{
@@ -53,6 +57,11 @@ defmodule WhereWeAre.CalendarSync do
 
   def handle_call(:state, _from, state) do
     {:reply, public_state(state), state}
+  end
+
+  def handle_call(:list_calendars, _from, state) do
+    reply = state.client.list_calendars(state.credentials)
+    {:reply, reply, state}
   end
 
   @impl true
