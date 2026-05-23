@@ -14,7 +14,7 @@ defmodule WhereWeAre.CalendarSync.CaldavClientTest do
       {:ok, [%{url: "https://caldav.icloud.com/calendar/"}]}
     end
 
-    def list_events(caldav_client, "https://caldav.icloud.com/calendar/") do
+    def list_events(caldav_client, "https://caldav.icloud.com/calendar/", _opts) do
       send(Process.get(:test_pid), {:list_events, caldav_client})
       {:ok, [:event]}
     end
