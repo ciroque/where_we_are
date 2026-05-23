@@ -98,7 +98,7 @@ defmodule WhereWeAre.CalendarSync.CaldavClient do
     |> then(&{:ok, &1})
   end
 
-  defp finalize_event_accumulation(error = {:error, _reason}), do: error
+  defp finalize_event_accumulation({:error, _reason} = error), do: error
 
   defp build_time_range_opts(%{event_window_months: 0}) do
     today = Date.utc_today()
