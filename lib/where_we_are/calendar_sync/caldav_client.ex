@@ -1,4 +1,7 @@
 defmodule WhereWeAre.CalendarSync.CaldavClient do
+  @moduledoc """
+  Wrapper around CalDAVEx that handles authentication, calendar discovery, and event retrieval.
+  """
   @base_url "https://caldav.icloud.com"
 
   def authenticate(config) do
@@ -21,9 +24,8 @@ defmodule WhereWeAre.CalendarSync.CaldavClient do
     caldav_client = caldav_client(config)
     client = client(config)
 
-    with {:ok, discovery_info} <- client.discover(caldav_client),
-         {:ok, calendars} <- client.list_calendars(caldav_client, discovery_info) do
-      {:ok, calendars}
+    with {:ok, discovery_info} <- client.discover(caldav_client) do
+      client.list_calendars(caldav_client, discovery_info)
     end
   end
 
@@ -45,12 +47,11 @@ defmodule WhereWeAre.CalendarSync.CaldavClient do
          {:ok, calendars} <- client.list_calendars(caldav_client, discovery_info) do
       calendars
       |> filter_calendars(config)
-      |> Enum.reduce_while({:ok, []}, fn calendar, {:ok, events} ->
-        case client.list_events(caldav_client, calendar.url, time_range_opts) do
-          {:ok, calendar_events} -> {:cont, {:ok, events ++ calendar_events}}
-          {:error, reason} -> {:halt, {:error, reason}}
-        end
-      end)
+      |> Enum.reduce_while(
+        {:ok, []},
+        &gather_events(&1, &2, client, caldav_client, time_range_opts)
+      )
+      |> finalize_event_accumulation()
     end
   end
 
@@ -83,6 +84,22 @@ defmodule WhereWeAre.CalendarSync.CaldavClient do
 
   defp filter_calendars(calendars, _config), do: calendars
 
+  defp gather_events(calendar, {:ok, events}, client, caldav_client, time_range_opts) do
+    case client.list_events(caldav_client, calendar.url, time_range_opts) do
+      {:ok, calendar_events} -> {:cont, {:ok, [calendar_events | events]}}
+      {:error, reason} -> {:halt, {:error, reason}}
+    end
+  end
+
+  defp finalize_event_accumulation({:ok, events}) do
+    events
+    |> Enum.reverse()
+    |> Enum.concat()
+    |> then(&{:ok, &1})
+  end
+
+  defp finalize_event_accumulation(error = {:error, _reason}), do: error
+
   defp build_time_range_opts(%{event_window_months: 0}) do
     today = Date.utc_today()
     window_open = today |> Date.beginning_of_month() |> to_datetime()
@@ -92,8 +109,13 @@ defmodule WhereWeAre.CalendarSync.CaldavClient do
 
   defp build_time_range_opts(%{event_window_months: months}) when is_integer(months) do
     today = Date.utc_today()
-    window_open = today |> Date.shift(month: -months) |> Date.beginning_of_month() |> to_datetime()
-    window_close = today |> Date.shift(month: months) |> Date.end_of_month() |> to_datetime(:end_of_day)
+
+    window_open =
+      today |> Date.shift(month: -months) |> Date.beginning_of_month() |> to_datetime()
+
+    window_close =
+      today |> Date.shift(month: months) |> Date.end_of_month() |> to_datetime(:end_of_day)
+
     [from: window_open, to: window_close]
   end
 

@@ -1,4 +1,7 @@
 defmodule WhereWeAre.CalendarSync.Config do
+  @moduledoc """
+  Builds a keyword list of CalendarSync options from environment variables.
+  """
   def from_env do
     [
       client: WhereWeAre.CalendarSync.CaldavClient,

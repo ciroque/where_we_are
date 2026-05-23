@@ -1,9 +1,15 @@
 defmodule WhereWeAre.CalendarSync do
+  @moduledoc """
+  Manages and schedules the CalDAV synchronization process, exposing sync state and controls.
+  """
   use GenServer
 
   @default_poll_interval :timer.minutes(10)
 
   defmodule NoopClient do
+    @moduledoc """
+    Minimal client implementation that returns no events for testing and defaults.
+    """
     def fetch_events(_config), do: {:ok, []}
   end
 
