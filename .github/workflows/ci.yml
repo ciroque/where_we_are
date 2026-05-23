@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-analyze:
+    name: Test & Static Analysis
+    runs-on: ubuntu-latest
+
+    env:
+      MIX_HOME: ${{ github.workspace }}/.mix
+      HEX_HOME: ${{ github.workspace }}/.hex
+      MIX_ENV: test
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Prepare Mix environment directories
+        run: |
+          mkdir -p "$MIX_HOME/archives"
+          mkdir -p "$HEX_HOME"
+
+      - name: Set up Elixir
+        id: beam
+        uses: erlef/setup-beam@v1.20.4
+        with:
+          otp-version: '27.3.4'
+          elixir-version: '1.19.5'
+          version-type: strict
+          hexpm-mirrors: |
+            https://builds.hex.pm
+            https://cdn.jsdelivr.net/hex
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+            priv/plts
+            ${{ github.workspace }}/.mix
+            ${{ github.workspace }}/.hex
+          key: ${{ runner.os }}-mix-${{ steps.beam.outputs['elixir-version'] }}-${{ steps.beam.outputs['otp-version'] }}-${{ hashFiles('**/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-mix-${{ steps.beam.outputs['elixir-version'] }}-${{ steps.beam.outputs['otp-version'] }}-
+            ${{ runner.os }}-mix-
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Compile
+        run: mix compile --warnings-as-errors
+
+      - name: Run Credo
+        run: mix credo --strict
+
+      - name: Run tests
+        run: mix test
+
+      - name: Run Dialyzer
+        run: mix dialyzer --format short
