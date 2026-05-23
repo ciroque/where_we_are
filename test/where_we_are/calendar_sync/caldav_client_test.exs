@@ -51,9 +51,31 @@ defmodule WhereWeAre.CalendarSync.CaldavClientTest do
 
     assert {:ok, [:event]} = CaldavClient.fetch_events(config)
 
-    assert_receive {:discover, %CalDAVEx.Client{}}
+    assert_receive {:discover,
+                    %CalDAVEx.Client{
+                      config: %CalDAVEx.Config{base_url: "https://caldav.icloud.com"}
+                    }}
+
     assert_receive {:list_calendars, %CalDAVEx.Client{}}
     assert_receive {:list_events, %CalDAVEx.Client{}}
+  end
+
+  test "fetch_events uses a custom CalDAV URL when provided" do
+    Process.put(:test_pid, self())
+
+    config = %{
+      username: "person@example.com",
+      password: "app-specific-password",
+      client: FakeClient,
+      url: "https://example.com/custom"
+    }
+
+    assert {:ok, [:event]} = CaldavClient.fetch_events(config)
+
+    assert_receive {:discover,
+                    %CalDAVEx.Client{
+                      config: %CalDAVEx.Config{base_url: "https://example.com/custom"}
+                    }}
   end
 
   test "returns an error when username is missing" do
