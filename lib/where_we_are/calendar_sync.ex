@@ -9,6 +9,7 @@ defmodule WhereWeAre.CalendarSync do
 
   defstruct client: nil,
             poll_interval: @default_poll_interval,
+            event_window_months: 6,
             credentials: %{},
             last_sync: nil,
             last_error: nil,
@@ -37,6 +38,7 @@ defmodule WhereWeAre.CalendarSync do
     state = %__MODULE__{
       client: Keyword.get(opts, :client, NoopClient),
       poll_interval: Keyword.get(opts, :poll_interval, @default_poll_interval),
+      event_window_months: Keyword.get(opts, :event_window_months, 6),
       credentials: Keyword.get(opts, :credentials, %{}),
       events: Keyword.get(opts, :initial_events, []),
       schedule?: Keyword.get(opts, :schedule?, true)
@@ -76,7 +78,9 @@ defmodule WhereWeAre.CalendarSync do
   end
 
   defp sync(state) do
-    case state.client.fetch_events(state.credentials) do
+    config = Map.put(state.credentials, :event_window_months, state.event_window_months)
+
+    case state.client.fetch_events(config) do
       {:ok, events} ->
         state = %{state | events: events, last_sync: DateTime.utc_now(), last_error: nil}
         {{:ok, events}, state}
@@ -91,6 +95,7 @@ defmodule WhereWeAre.CalendarSync do
     %{
       client: state.client,
       poll_interval: state.poll_interval,
+      event_window_months: state.event_window_months,
       credentials: state.credentials,
       last_sync: state.last_sync,
       last_error: state.last_error,

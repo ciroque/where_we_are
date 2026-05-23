@@ -39,13 +39,14 @@ defmodule WhereWeAre.CalendarSync.CaldavClient do
   def fetch_events(config) do
     caldav_client = caldav_client(config)
     client = client(config)
+    time_range_opts = build_time_range_opts(config)
 
     with {:ok, discovery_info} <- client.discover(caldav_client),
          {:ok, calendars} <- client.list_calendars(caldav_client, discovery_info) do
       calendars
       |> filter_calendars(config)
       |> Enum.reduce_while({:ok, []}, fn calendar, {:ok, events} ->
-        case client.list_events(caldav_client, calendar.url) do
+        case client.list_events(caldav_client, calendar.url, time_range_opts) do
           {:ok, calendar_events} -> {:cont, {:ok, events ++ calendar_events}}
           {:error, reason} -> {:halt, {:error, reason}}
         end
@@ -81,4 +82,28 @@ defmodule WhereWeAre.CalendarSync.CaldavClient do
   end
 
   defp filter_calendars(calendars, _config), do: calendars
+
+  defp build_time_range_opts(%{event_window_months: 0}) do
+    today = Date.utc_today()
+    window_open = today |> Date.beginning_of_month() |> to_datetime()
+    window_close = today |> Date.end_of_month() |> to_datetime(:end_of_day)
+    [from: window_open, to: window_close]
+  end
+
+  defp build_time_range_opts(%{event_window_months: months}) when is_integer(months) do
+    today = Date.utc_today()
+    window_open = today |> Date.shift(month: -months) |> Date.beginning_of_month() |> to_datetime()
+    window_close = today |> Date.shift(month: months) |> Date.end_of_month() |> to_datetime(:end_of_day)
+    [from: window_open, to: window_close]
+  end
+
+  defp build_time_range_opts(_config), do: []
+
+  defp to_datetime(date, :end_of_day) do
+    DateTime.new!(date, ~T[23:59:59], "Etc/UTC")
+  end
+
+  defp to_datetime(date) do
+    DateTime.new!(date, ~T[00:00:00], "Etc/UTC")
+  end
 end

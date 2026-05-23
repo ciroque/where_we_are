@@ -3,6 +3,7 @@ defmodule WhereWeAre.CalendarSync.Config do
     [
       client: WhereWeAre.CalendarSync.CaldavClient,
       poll_interval: :timer.minutes(10),
+      event_window_months: parse_integer(System.get_env("CALDAV_EVENT_WINDOW_MONTHS"), 6),
       credentials: %{
         username: System.get_env("CALDAV_USERNAME"),
         password: System.get_env("CALDAV_PASSWORD"),
@@ -20,5 +21,15 @@ defmodule WhereWeAre.CalendarSync.Config do
     |> String.split(",")
     |> Enum.map(&String.trim/1)
     |> Enum.reject(&(&1 == ""))
+  end
+
+  defp parse_integer(nil, default), do: default
+  defp parse_integer("", default), do: default
+
+  defp parse_integer(value, default) do
+    case Integer.parse(value) do
+      {int, _} -> int
+      :error -> default
+    end
   end
 end
