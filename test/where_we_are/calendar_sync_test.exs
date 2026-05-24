@@ -75,4 +75,75 @@ defmodule WhereWeAre.CalendarSyncTest do
              last_sync: nil
            } = CalendarSync.state(pid)
   end
+
+  describe "events_for_month/2" do
+    test "returns events starting within the month when starts_at is a DateTime" do
+      {:ok, pid} =
+        start_supervised(
+          {CalendarSync,
+           name: :calendar_sync_events_month_test,
+           schedule?: false,
+           initial_events: [
+             %{
+               id: "jan-early",
+               starts_at: DateTime.new!(~D[2024-01-05], ~T[09:00:00], "Etc/UTC")
+             },
+             %{
+               id: "feb-start",
+               starts_at: DateTime.new!(~D[2024-02-01], ~T[08:00:00], "Etc/UTC")
+             },
+             %{id: "jan-late", starts_at: DateTime.new!(~D[2024-01-31], ~T[18:30:00], "Etc/UTC")}
+           ]}
+        )
+
+      january = ~D[2024-01-01]
+
+      assert [%{id: "jan-early"}, %{id: "jan-late"}] =
+               CalendarSync.events_for_month(january, pid)
+    end
+
+    test "filters by both month and year" do
+      {:ok, pid} =
+        start_supervised(
+          {CalendarSync,
+           name: :calendar_sync_events_year_test,
+           schedule?: false,
+           initial_events: [
+             %{
+               id: "may-2025",
+               starts_at: DateTime.new!(~D[2025-05-10], ~T[10:00:00], "Etc/UTC")
+             },
+             %{
+               id: "may-2026",
+               starts_at: DateTime.new!(~D[2026-05-10], ~T[10:00:00], "Etc/UTC")
+             },
+             %{
+               id: "june-2026",
+               starts_at: DateTime.new!(~D[2026-06-01], ~T[08:00:00], "Etc/UTC")
+             }
+           ]}
+        )
+
+      assert [%{id: "may-2026"}] = CalendarSync.events_for_month(~D[2026-05-01], pid)
+      assert [%{id: "may-2025"}] = CalendarSync.events_for_month(~D[2025-05-01], pid)
+    end
+
+    test "supports events with start_date and ignores events missing a recognized date" do
+      {:ok, pid} =
+        start_supervised(
+          {CalendarSync,
+           name: :calendar_sync_events_month_date_test,
+           schedule?: false,
+           initial_events: [
+             %{id: "with-date", start_date: ~D[2024-01-10]},
+             %{id: "missing-date"}
+           ]}
+        )
+
+      january = ~D[2024-01-01]
+
+      assert [%{id: "with-date"}] = CalendarSync.events_for_month(january, pid)
+      assert [] = CalendarSync.events_for_month(~D[2024-02-01], pid)
+    end
+  end
 end

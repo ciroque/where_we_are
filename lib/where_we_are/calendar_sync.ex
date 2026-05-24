@@ -39,6 +39,10 @@ defmodule WhereWeAre.CalendarSync do
     GenServer.call(server, :list_calendars)
   end
 
+  def events_for_month(month_start, server \\ __MODULE__) do
+    GenServer.call(server, {:events_for_month, month_start})
+  end
+
   @impl true
   def init(opts) do
     state = %__MODULE__{
@@ -70,6 +74,18 @@ defmodule WhereWeAre.CalendarSync do
   def handle_call(:list_calendars, _from, state) do
     reply = state.client.list_calendars(state.credentials)
     {:reply, reply, state}
+  end
+
+  def handle_call({:events_for_month, month_start}, _from, state) do
+    month_start = Date.beginning_of_month(month_start)
+    month_end = Date.end_of_month(month_start)
+
+    events =
+      state.events
+      |> Enum.filter(&event_in_range?(&1, month_start, month_end))
+      |> Enum.sort_by(&event_sort_key/1)
+
+    {:reply, events, state}
   end
 
   @impl true
@@ -108,4 +124,27 @@ defmodule WhereWeAre.CalendarSync do
       events: state.events
     }
   end
+
+  defp event_in_range?(event, month_start, month_end) do
+    case event_date(event) do
+      {:ok, date} ->
+        Date.compare(date, month_start) in [:eq, :gt] and
+          Date.compare(date, month_end) in [:eq, :lt]
+
+      _ ->
+        false
+    end
+  end
+
+  defp event_sort_key(%{dtstart: %DateTime{} = dt}), do: dt
+  defp event_sort_key(%{dtstart: %Date{} = date}), do: DateTime.new!(date, ~T[00:00:00], "Etc/UTC")
+  defp event_sort_key(%{starts_at: %DateTime{} = dt}), do: dt
+  defp event_sort_key(%{start_date: %Date{} = date}), do: DateTime.new!(date, ~T[00:00:00], "Etc/UTC")
+  defp event_sort_key(_event), do: DateTime.new!(~D[0000-01-01], ~T[00:00:00], "Etc/UTC")
+
+  defp event_date(%{dtstart: %DateTime{} = dt}), do: {:ok, DateTime.to_date(dt)}
+  defp event_date(%{dtstart: %Date{} = date}), do: {:ok, date}
+  defp event_date(%{starts_at: %DateTime{} = dt}), do: {:ok, DateTime.to_date(dt)}
+  defp event_date(%{start_date: %Date{} = date}), do: {:ok, date}
+  defp event_date(_event), do: :error
 end
