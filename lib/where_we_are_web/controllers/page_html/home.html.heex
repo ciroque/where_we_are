@@ -44,36 +44,111 @@ next_month =
         <span aria-hidden="true">●</span> Today
       </a>
     </div>
-    <div class="mt-8 grid grid-cols-7 text-center text-xs font-semibold uppercase tracking-widest text-zinc-500 sm:text-sm">
-      <span>Sun</span>
-      <span>Mon</span>
-      <span>Tue</span>
-      <span>Wed</span>
-      <span>Thu</span>
-      <span>Fri</span>
-      <span>Sat</span>
-    </div>
-    <div class="mt-2 grid grid-cols-7 gap-px rounded-2xl bg-zinc-200 text-sm text-zinc-700 sm:text-base">
-      <%= for day <- calendar_cells do %>
-        <div
-          class={[
-            "aspect-square bg-white p-3 text-right transition",
-            day.month == first_of_month.month && "font-semibold text-zinc-900",
-            day.month != first_of_month.month && "text-zinc-400",
-            day == today &&
-              "bg-sky-100 text-sky-700 ring-2 ring-sky-400 ring-offset-2 ring-offset-white"
-          ]}
-          aria-disabled={day.month != first_of_month.month && "true"}
-          tabindex={day.month != first_of_month.month && "-1"}
-        >
-          <time
-            datetime={Date.to_iso8601(day)}
-            aria-label={Calendar.strftime(day, "%A, %B %-d, %Y")}
-            aria-current={day == today && "date"}
-            class="text-sm sm:text-base"
+    <div class="mx-auto mt-6 max-w-sm">
+      <div class="grid grid-cols-7 text-center text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
+        <span>Sun</span>
+        <span>Mon</span>
+        <span>Tue</span>
+        <span>Wed</span>
+        <span>Thu</span>
+        <span>Fri</span>
+        <span>Sat</span>
+      </div>
+      <div class="mt-1 grid grid-cols-7 gap-px rounded-xl bg-zinc-200 text-xs text-zinc-700">
+        <%= for day <- calendar_cells do %>
+          <div
+            class={[
+              "aspect-square bg-white p-1 text-right transition",
+              day.month == first_of_month.month && "font-semibold text-zinc-900",
+              day.month != first_of_month.month && "text-zinc-400",
+              day == today &&
+                "bg-sky-100 text-sky-700 ring-1 ring-sky-400 ring-offset-1 ring-offset-white",
+              day != today && MapSet.member?(@event_dates, day) &&
+                "text-emerald-600 font-bold"
+            ]}
+            aria-disabled={day.month != first_of_month.month && "true"}
+            tabindex={day.month != first_of_month.month && "-1"}
           >
-            {day.day}
-          </time>
+            <time
+              datetime={Date.to_iso8601(day)}
+              aria-label={Calendar.strftime(day, "%A, %B %-d, %Y")}
+              aria-current={day == today && "date"}
+              class="text-xs"
+            >
+              {day.day}
+            </time>
+          </div>
+        <% end %>
+      </div>
+    </div>
+    <% {past_events, upcoming_events} =
+      Enum.split_with(@events, fn event ->
+        event_date =
+          if is_struct(event.dtstart, DateTime),
+            do: DateTime.to_date(event.dtstart),
+            else: event.dtstart
+
+        Date.compare(event_date, today) == :lt
+      end) %>
+    <div class="mt-8">
+      <%= if @events == [] do %>
+        <p class="text-center text-zinc-400 italic">No events this month.</p>
+      <% else %>
+        <div class="divide-y divide-zinc-200 rounded-2xl border border-zinc-200 bg-white">
+          <div class="px-5 py-3 bg-emerald-50 rounded-t-2xl">
+            <h2 class="text-xs font-semibold uppercase tracking-widest text-emerald-600">Today &amp; Upcoming</h2>
+          </div>
+          <%= if upcoming_events != [] do %>
+            <ul class="divide-y divide-zinc-100">
+              <%= for event <- upcoming_events do %>
+                <li class="flex items-center gap-4 px-5 py-4">
+                  <time
+                    datetime={
+                      if is_struct(event.dtstart, DateTime),
+                        do: DateTime.to_iso8601(event.dtstart),
+                        else: Date.to_iso8601(event.dtstart)
+                    }
+                    class="shrink-0 text-sm font-medium text-sky-600"
+                  >
+                    <%= if is_struct(event.dtstart, DateTime) do %>
+                      {Calendar.strftime(event.dtstart, "%b %-d, %-I:%M %p")}
+                    <% else %>
+                      {Calendar.strftime(event.dtstart, "%b %-d")}
+                    <% end %>
+                  </time>
+                  <span class="text-base text-zinc-800">{Map.get(event, :summary, "Untitled")}</span>
+                </li>
+              <% end %>
+            </ul>
+          <% else %>
+            <p class="px-5 py-4 text-center text-zinc-400 italic">No upcoming events.</p>
+          <% end %>
+          <%= if past_events != [] do %>
+            <div class="px-5 py-3 bg-zinc-50">
+              <h2 class="text-xs font-semibold uppercase tracking-widest text-zinc-400">Past</h2>
+            </div>
+            <ul class="divide-y divide-zinc-100">
+              <%= for event <- past_events do %>
+                <li class="flex items-center gap-4 px-5 py-4 opacity-60">
+                  <time
+                    datetime={
+                      if is_struct(event.dtstart, DateTime),
+                        do: DateTime.to_iso8601(event.dtstart),
+                        else: Date.to_iso8601(event.dtstart)
+                    }
+                    class="shrink-0 text-sm font-medium text-zinc-400"
+                  >
+                    <%= if is_struct(event.dtstart, DateTime) do %>
+                      {Calendar.strftime(event.dtstart, "%b %-d, %-I:%M %p")}
+                    <% else %>
+                      {Calendar.strftime(event.dtstart, "%b %-d")}
+                    <% end %>
+                  </time>
+                  <span class="text-base text-zinc-500">{Map.get(event, :summary, "Untitled")}</span>
+                </li>
+              <% end %>
+            </ul>
+          <% end %>
         </div>
       <% end %>
     </div>
