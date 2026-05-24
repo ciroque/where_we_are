@@ -77,7 +77,7 @@ defmodule WhereWeAre.CalendarSyncTest do
   end
 
   describe "events_for_month/2" do
-    test "returns events starting within the month when starts_at is a DateTime" do
+    test "returns events starting within the month when dtstart is a DateTime" do
       {:ok, pid} =
         start_supervised(
           {CalendarSync,
@@ -86,20 +86,20 @@ defmodule WhereWeAre.CalendarSyncTest do
            initial_events: [
              %{
                id: "jan-early",
-               starts_at: DateTime.new!(~D[2024-01-05], ~T[09:00:00], "Etc/UTC")
+               dtstart: DateTime.new!(~D[2024-01-05], ~T[09:00:00], "Etc/UTC")
              },
              %{
                id: "feb-start",
-               starts_at: DateTime.new!(~D[2024-02-01], ~T[08:00:00], "Etc/UTC")
+               dtstart: DateTime.new!(~D[2024-02-01], ~T[08:00:00], "Etc/UTC")
              },
-             %{id: "jan-late", starts_at: DateTime.new!(~D[2024-01-31], ~T[18:30:00], "Etc/UTC")}
+             %{id: "jan-late", dtstart: DateTime.new!(~D[2024-01-31], ~T[18:30:00], "Etc/UTC")}
            ]}
         )
 
       january = ~D[2024-01-01]
 
       assert [%{id: "jan-early"}, %{id: "jan-late"}] =
-               CalendarSync.events_for_month(january, pid)
+               CalendarSync.events_for_month(pid, january)
     end
 
     test "filters by both month and year" do
@@ -111,39 +111,39 @@ defmodule WhereWeAre.CalendarSyncTest do
            initial_events: [
              %{
                id: "may-2025",
-               starts_at: DateTime.new!(~D[2025-05-10], ~T[10:00:00], "Etc/UTC")
+               dtstart: DateTime.new!(~D[2025-05-10], ~T[10:00:00], "Etc/UTC")
              },
              %{
                id: "may-2026",
-               starts_at: DateTime.new!(~D[2026-05-10], ~T[10:00:00], "Etc/UTC")
+               dtstart: DateTime.new!(~D[2026-05-10], ~T[10:00:00], "Etc/UTC")
              },
              %{
                id: "june-2026",
-               starts_at: DateTime.new!(~D[2026-06-01], ~T[08:00:00], "Etc/UTC")
+               dtstart: DateTime.new!(~D[2026-06-01], ~T[08:00:00], "Etc/UTC")
              }
            ]}
         )
 
-      assert [%{id: "may-2026"}] = CalendarSync.events_for_month(~D[2026-05-01], pid)
-      assert [%{id: "may-2025"}] = CalendarSync.events_for_month(~D[2025-05-01], pid)
+      assert [%{id: "may-2026"}] = CalendarSync.events_for_month(pid, ~D[2026-05-01])
+      assert [%{id: "may-2025"}] = CalendarSync.events_for_month(pid, ~D[2025-05-01])
     end
 
-    test "supports events with start_date and ignores events missing a recognized date" do
+    test "supports events with Date dtstart and ignores events missing dtstart" do
       {:ok, pid} =
         start_supervised(
           {CalendarSync,
            name: :calendar_sync_events_month_date_test,
            schedule?: false,
            initial_events: [
-             %{id: "with-date", start_date: ~D[2024-01-10]},
+             %{id: "with-date", dtstart: ~D[2024-01-10]},
              %{id: "missing-date"}
            ]}
         )
 
       january = ~D[2024-01-01]
 
-      assert [%{id: "with-date"}] = CalendarSync.events_for_month(january, pid)
-      assert [] = CalendarSync.events_for_month(~D[2024-02-01], pid)
+      assert [%{id: "with-date"}] = CalendarSync.events_for_month(pid, january)
+      assert [] = CalendarSync.events_for_month(pid, ~D[2024-02-01])
     end
   end
 end

@@ -7,7 +7,10 @@ defmodule WhereWeAreWeb.PageController do
 
     events =
       conn.assigns[:events] ||
-        WhereWeAre.CalendarSync.events_for_month(displayed_month)
+        WhereWeAre.CalendarSync.events_for_month(
+          WhereWeAre.CalendarSync,
+          displayed_month
+        )
 
     event_dates =
       events
@@ -43,7 +46,5 @@ defmodule WhereWeAreWeb.PageController do
 
   defp event_date(%{dtstart: %DateTime{} = dt}), do: DateTime.to_date(dt)
   defp event_date(%{dtstart: %Date{} = date}), do: date
-  defp event_date(%{starts_at: %DateTime{} = dt}), do: DateTime.to_date(dt)
-  defp event_date(%{start_date: %Date{} = date}), do: date
   defp event_date(_), do: nil
 end

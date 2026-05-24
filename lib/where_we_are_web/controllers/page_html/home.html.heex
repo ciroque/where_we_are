@@ -96,7 +96,9 @@ next_month =
       <% else %>
         <div class="divide-y divide-zinc-200 rounded-2xl border border-zinc-200 bg-white">
           <div class="px-5 py-3 bg-emerald-50 rounded-t-2xl">
-            <h2 class="text-xs font-semibold uppercase tracking-widest text-emerald-600">Today &amp; Upcoming</h2>
+            <h2 class="text-xs font-semibold uppercase tracking-widest text-emerald-600">
+              Today &amp; Upcoming
+            </h2>
           </div>
           <%= if upcoming_events != [] do %>
             <ul class="divide-y divide-zinc-100">
@@ -116,7 +118,9 @@ next_month =
                       {Calendar.strftime(event.dtstart, "%b %-d")}
                     <% end %>
                   </time>
-                  <span class="text-base text-zinc-800">{Map.get(event, :summary, "Untitled")}</span>
+                  <span class="text-base text-zinc-800">
+                    {Map.get(event, :summary, "Untitled")}
+                  </span>
                 </li>
               <% end %>
             </ul>
@@ -144,7 +148,9 @@ next_month =
                       {Calendar.strftime(event.dtstart, "%b %-d")}
                     <% end %>
                   </time>
-                  <span class="text-base text-zinc-500">{Map.get(event, :summary, "Untitled")}</span>
+                  <span class="text-base text-zinc-500">
+                    {Map.get(event, :summary, "Untitled")}
+                  </span>
                 </li>
               <% end %>
             </ul>
