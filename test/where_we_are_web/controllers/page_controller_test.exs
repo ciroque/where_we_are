@@ -37,6 +37,44 @@ defmodule WhereWeAreWeb.PageControllerTest do
     assert response =~ "Sat"
   end
 
+  test "GET / renders events for the displayed month", %{conn: conn} do
+    today = ~D[2024-01-15]
+
+    events = [
+      %{
+        id: "dinner",
+        dtstart: DateTime.new!(~D[2024-01-20], ~T[18:00:00], "Etc/UTC"),
+        summary: "Family Dinner"
+      },
+      %{
+        id: "lunch",
+        dtstart: DateTime.new!(~D[2024-01-10], ~T[12:00:00], "Etc/UTC"),
+        summary: "Team Lunch"
+      }
+    ]
+
+    conn =
+      conn
+      |> Plug.Conn.assign(:today, today)
+      |> Plug.Conn.assign(:events, events)
+      |> get(~p"/")
+
+    response = html_response(conn, 200)
+
+    assert response =~ "Family Dinner"
+    assert response =~ "Team Lunch"
+
+    # Days with events should be highlighted green
+    assert response =~ "text-emerald-600"
+
+    # Past / Upcoming delimiter
+    assert response =~ "Past"
+    assert response =~ "Today &amp; Upcoming"
+
+    # Past events are muted, upcoming are not
+    assert response =~ "opacity-60"
+  end
+
   test "GET / with month param shows requested month", %{conn: conn} do
     today = ~D[2024-01-15]
     displayed_month = ~D[2024-03-01]

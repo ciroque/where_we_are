@@ -5,10 +5,25 @@ defmodule WhereWeAreWeb.PageController do
     today = conn.assigns[:today] || Date.utc_today()
     displayed_month = resolve_displayed_month(params, today)
 
+    events =
+      conn.assigns[:events] ||
+        WhereWeAre.CalendarSync.events_for_month(
+          WhereWeAre.CalendarSync,
+          displayed_month
+        )
+
+    event_dates =
+      events
+      |> Enum.map(&event_date/1)
+      |> Enum.reject(&is_nil/1)
+      |> MapSet.new()
+
     render(conn, :home,
       layout: false,
       today: today,
-      displayed_month: displayed_month
+      displayed_month: displayed_month,
+      events: events,
+      event_dates: event_dates
     )
   end
 
@@ -28,4 +43,8 @@ defmodule WhereWeAreWeb.PageController do
   defp resolve_displayed_month(_params, today) do
     Date.beginning_of_month(today)
   end
+
+  defp event_date(%{dtstart: %DateTime{} = dt}), do: DateTime.to_date(dt)
+  defp event_date(%{dtstart: %Date{} = date}), do: date
+  defp event_date(_), do: nil
 end
