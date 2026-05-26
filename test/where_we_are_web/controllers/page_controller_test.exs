@@ -64,8 +64,8 @@ defmodule WhereWeAreWeb.PageControllerTest do
     assert response =~ "Family Dinner"
     assert response =~ "Team Lunch"
 
-    # Days with events should be highlighted green
-    assert response =~ "text-emerald-600"
+    # Event slugs appear in calendar day cells
+    assert response =~ "bg-emerald-100"
 
     # Past / Upcoming delimiter
     assert response =~ "Past"

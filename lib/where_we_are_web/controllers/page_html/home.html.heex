@@ -9,7 +9,14 @@ calendar_cells = Enum.map(0..41, fn offset -> Date.add(grid_start, offset) end)
 prev_month = Date.add(first_of_month, -1) |> Date.beginning_of_month()
 
 next_month =
-  Date.add(first_of_month, Date.days_in_month(first_of_month)) |> Date.beginning_of_month() %>
+  Date.add(first_of_month, Date.days_in_month(first_of_month)) |> Date.beginning_of_month()
+
+events_by_date =
+  Enum.group_by(@events, fn event ->
+    if is_struct(event.dtstart, DateTime),
+      do: DateTime.to_date(event.dtstart),
+      else: event.dtstart
+  end) %>
 
 <section class="relative z-10 flex flex-col items-center bg-gradient-to-br from-sky-100 via-white to-emerald-50 px-6 py-16">
   <div class="w-full max-w-5xl rounded-3xl bg-white/80 p-8 shadow-xl ring-1 ring-sky-100 backdrop-blur">
@@ -44,42 +51,49 @@ next_month =
         <span aria-hidden="true">●</span> Today
       </a>
     </div>
-    <div class="mx-auto mt-6 max-w-sm">
-      <div class="grid grid-cols-7 text-center text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
-        <span>Sun</span>
-        <span>Mon</span>
-        <span>Tue</span>
-        <span>Wed</span>
-        <span>Thu</span>
-        <span>Fri</span>
-        <span>Sat</span>
-      </div>
-      <div class="mt-1 grid grid-cols-7 gap-px rounded-xl bg-zinc-200 text-xs text-zinc-700">
-        <%= for day <- calendar_cells do %>
-          <div
-            class={[
-              "aspect-square bg-white p-1 text-right transition",
-              day.month == first_of_month.month && "font-semibold text-zinc-900",
-              day.month != first_of_month.month && "text-zinc-400",
-              day == today &&
-                "bg-sky-100 text-sky-700 ring-1 ring-sky-400 ring-offset-1 ring-offset-white",
-              day != today && MapSet.member?(@event_dates, day) &&
-                "text-emerald-600 font-bold"
-            ]}
-            aria-disabled={day.month != first_of_month.month && "true"}
-            tabindex={day.month != first_of_month.month && "-1"}
+    <div class="mt-8 grid grid-cols-7 text-center text-xs font-semibold uppercase tracking-widest text-zinc-500 sm:text-sm">
+      <span>Sun</span>
+      <span>Mon</span>
+      <span>Tue</span>
+      <span>Wed</span>
+      <span>Thu</span>
+      <span>Fri</span>
+      <span>Sat</span>
+    </div>
+    <div class="mt-2 grid grid-cols-7 gap-px rounded-2xl bg-zinc-200 text-sm text-zinc-700 sm:text-base">
+      <%= for day <- calendar_cells do %>
+        <% day_events = Map.get(events_by_date, day, []) %>
+        <div
+          class={[
+            "min-h-[5rem] bg-white p-2 transition",
+            day.month == first_of_month.month && "text-zinc-900",
+            day.month != first_of_month.month && "text-zinc-400",
+            day == today &&
+              "bg-sky-100 text-sky-700 ring-2 ring-sky-400 ring-offset-2 ring-offset-white",
+            day != today && day_events != [] && "text-emerald-600"
+          ]}
+          aria-disabled={day.month != first_of_month.month && "true"}
+          tabindex={day.month != first_of_month.month && "-1"}
+        >
+          <time
+            datetime={Date.to_iso8601(day)}
+            aria-label={Calendar.strftime(day, "%A, %B %-d, %Y")}
+            aria-current={day == today && "date"}
+            class="block text-right text-sm font-semibold"
           >
-            <time
-              datetime={Date.to_iso8601(day)}
-              aria-label={Calendar.strftime(day, "%A, %B %-d, %Y")}
-              aria-current={day == today && "date"}
-              class="text-xs"
-            >
-              {day.day}
-            </time>
-          </div>
-        <% end %>
-      </div>
+            {day.day}
+          </time>
+          <%= if day.month == first_of_month.month do %>
+            <div class="mt-1 flex flex-col gap-0.5">
+              <%= for event <- day_events do %>
+                <span class="block truncate rounded bg-emerald-100 px-1 py-0.5 text-[10px] leading-tight text-emerald-800">
+                  {Map.get(event, :summary, "Untitled")}
+                </span>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
     </div>
     <% {past_events, upcoming_events} =
       Enum.split_with(@events, fn event ->
