@@ -75,6 +75,30 @@ defmodule WhereWeAreWeb.PageControllerTest do
     assert response =~ "opacity-60"
   end
 
+  test "GET / converts event times to local timezone", %{conn: conn} do
+    today = ~D[2024-01-15]
+
+    events = [
+      %{
+        id: "late-utc",
+        dtstart: DateTime.new!(~D[2024-01-16], ~T[02:00:00], "Etc/UTC"),
+        summary: "Late Night Event"
+      }
+    ]
+
+    conn =
+      conn
+      |> Plug.Conn.assign(:today, today)
+      |> Plug.Conn.assign(:events, events)
+      |> Plug.Conn.assign(:timezone, "America/Denver")
+      |> get(~p"/")
+
+    response = html_response(conn, 200)
+
+    # 2024-01-16 02:00 UTC = 2024-01-15 19:00 MST (America/Denver is UTC-7 in Jan)
+    assert response =~ "7:00 PM"
+  end
+
   test "GET / with month param shows requested month", %{conn: conn} do
     today = ~D[2024-01-15]
     displayed_month = ~D[2024-03-01]

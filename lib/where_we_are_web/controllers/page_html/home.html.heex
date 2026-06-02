@@ -1,6 +1,7 @@
 <.flash_group flash={@flash} />
 <% today = @today
 displayed_month = @displayed_month
+timezone = @timezone
 first_of_month = Date.beginning_of_month(displayed_month)
 month_label = Calendar.strftime(first_of_month, "%B %Y")
 sunday_offset = rem(Date.day_of_week(first_of_month), 7)
@@ -11,12 +12,18 @@ prev_month = Date.add(first_of_month, -1) |> Date.beginning_of_month()
 next_month =
   Date.add(first_of_month, Date.days_in_month(first_of_month)) |> Date.beginning_of_month()
 
+to_local = fn
+  %DateTime{} = dt -> DateTime.shift_zone!(dt, timezone)
+  other -> other
+end
+
+local_date = fn
+  %DateTime{} = dt -> dt |> DateTime.shift_zone!(timezone) |> DateTime.to_date()
+  %Date{} = d -> d
+end
+
 events_by_date =
-  Enum.group_by(@events, fn event ->
-    if is_struct(event.dtstart, DateTime),
-      do: DateTime.to_date(event.dtstart),
-      else: event.dtstart
-  end) %>
+  Enum.group_by(@events, fn event -> local_date.(event.dtstart) end) %>
 
 <section class="relative z-10 flex flex-col items-center bg-gradient-to-br from-sky-100 via-white to-emerald-50 px-6 py-16">
   <div class="w-full max-w-5xl rounded-3xl bg-white/80 p-8 shadow-xl ring-1 ring-sky-100 backdrop-blur">
@@ -86,7 +93,11 @@ events_by_date =
           <%= if day.month == first_of_month.month do %>
             <div class="mt-1 flex flex-col gap-0.5">
               <%= for event <- day_events do %>
+                <% local = to_local.(event.dtstart) %>
                 <span class="block truncate rounded bg-emerald-100 px-1 py-0.5 text-[10px] leading-tight text-emerald-800">
+                  <%= if is_struct(local, DateTime) do %>
+                    <span class="font-semibold">{Calendar.strftime(local, "%-I:%M %p")}</span>
+                  <% end %>
                   {Map.get(event, :summary, "Untitled")}
                 </span>
               <% end %>
@@ -97,12 +108,7 @@ events_by_date =
     </div>
     <% {past_events, upcoming_events} =
       Enum.split_with(@events, fn event ->
-        event_date =
-          if is_struct(event.dtstart, DateTime),
-            do: DateTime.to_date(event.dtstart),
-            else: event.dtstart
-
-        Date.compare(event_date, today) == :lt
+        Date.compare(local_date.(event.dtstart), today) == :lt
       end) %>
     <div class="mt-8">
       <%= if @events == [] do %>
@@ -118,18 +124,19 @@ events_by_date =
             <ul class="divide-y divide-zinc-100">
               <%= for event <- upcoming_events do %>
                 <li class="flex items-center gap-4 px-5 py-4">
+                  <% local = to_local.(event.dtstart) %>
                   <time
                     datetime={
-                      if is_struct(event.dtstart, DateTime),
-                        do: DateTime.to_iso8601(event.dtstart),
-                        else: Date.to_iso8601(event.dtstart)
+                      if is_struct(local, DateTime),
+                        do: DateTime.to_iso8601(local),
+                        else: Date.to_iso8601(local)
                     }
                     class="shrink-0 text-sm font-medium text-sky-600"
                   >
-                    <%= if is_struct(event.dtstart, DateTime) do %>
-                      {Calendar.strftime(event.dtstart, "%b %-d, %-I:%M %p")}
+                    <%= if is_struct(local, DateTime) do %>
+                      {Calendar.strftime(local, "%b %-d, %-I:%M %p")}
                     <% else %>
-                      {Calendar.strftime(event.dtstart, "%b %-d")}
+                      {Calendar.strftime(local, "%b %-d")}
                     <% end %>
                   </time>
                   <span class="text-base text-zinc-800">
@@ -148,18 +155,19 @@ events_by_date =
             <ul class="divide-y divide-zinc-100">
               <%= for event <- past_events do %>
                 <li class="flex items-center gap-4 px-5 py-4 opacity-60">
+                  <% local = to_local.(event.dtstart) %>
                   <time
                     datetime={
-                      if is_struct(event.dtstart, DateTime),
-                        do: DateTime.to_iso8601(event.dtstart),
-                        else: Date.to_iso8601(event.dtstart)
+                      if is_struct(local, DateTime),
+                        do: DateTime.to_iso8601(local),
+                        else: Date.to_iso8601(local)
                     }
                     class="shrink-0 text-sm font-medium text-zinc-400"
                   >
-                    <%= if is_struct(event.dtstart, DateTime) do %>
-                      {Calendar.strftime(event.dtstart, "%b %-d, %-I:%M %p")}
+                    <%= if is_struct(local, DateTime) do %>
+                      {Calendar.strftime(local, "%b %-d, %-I:%M %p")}
                     <% else %>
-                      {Calendar.strftime(event.dtstart, "%b %-d")}
+                      {Calendar.strftime(local, "%b %-d")}
                     <% end %>
                   </time>
                   <span class="text-base text-zinc-500">
@@ -174,3 +182,6 @@ events_by_date =
     </div>
   </div>
 </section>
+<script>
+  document.cookie = "tz=" + Intl.DateTimeFormat().resolvedOptions().timeZone + ";path=/;max-age=31536000";
+</script>
