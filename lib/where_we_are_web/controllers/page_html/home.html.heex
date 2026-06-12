@@ -76,7 +76,7 @@ events_by_date =
             day.month == first_of_month.month && "text-zinc-900",
             day.month != first_of_month.month && "text-zinc-400",
             day == today &&
-              "bg-sky-100 text-sky-700 ring-2 ring-sky-400 ring-offset-2 ring-offset-white"
+              "bg-sky-50 text-sky-700 border-2 border-sky-400 relative z-10"
           ]}
           aria-disabled={day.month != first_of_month.month && "true"}
           tabindex={day.month != first_of_month.month && "-1"}
@@ -94,7 +94,7 @@ events_by_date =
               <%= for event <- day_events do %>
                 <% local = to_local.(event.dtstart) %>
                 <% color = WhereWeAreWeb.PageHTML.calendar_color(Map.get(event, :calendar_name)) %>
-                <span class={["block truncate rounded px-1 py-0.5 text-[10px] leading-tight", color.bg, color.text]}>
+                <span class={["block truncate rounded px-1 py-0.5 text-xs leading-tight", color.bg, color.text]} title={Map.get(event, :summary, "Untitled")}>
                   <%= if is_struct(local, DateTime) do %>
                     <span class="font-semibold">{Calendar.strftime(local, "%-I:%M %p")}</span>
                   <% end %>
