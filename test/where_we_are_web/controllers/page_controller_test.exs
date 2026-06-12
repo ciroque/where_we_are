@@ -7,7 +7,7 @@ defmodule WhereWeAreWeb.PageControllerTest do
     conn =
       conn
       |> Plug.Conn.assign(:today, today)
-      |> get(~p"/")
+      |> get(~p"/static")
 
     month_label = Calendar.strftime(today, "%B %Y")
     first_of_month = Date.beginning_of_month(today)
@@ -24,9 +24,9 @@ defmodule WhereWeAreWeb.PageControllerTest do
     assert response =~ "Move Previous"
     assert response =~ "Move Next"
     assert response =~ "Today"
-    assert response =~ ~s(href="/?month=#{Date.to_iso8601(prev_month)}")
-    assert response =~ ~s(href="/?month=#{Date.to_iso8601(next_month)}")
-    assert response =~ ~s(href="/?today=true")
+    assert response =~ ~s(href="/static?month=#{Date.to_iso8601(prev_month)}")
+    assert response =~ ~s(href="/static?month=#{Date.to_iso8601(next_month)}")
+    assert response =~ ~s(href="/static?today=true")
 
     assert response =~ "Sun"
     assert response =~ "Mon"
@@ -57,7 +57,7 @@ defmodule WhereWeAreWeb.PageControllerTest do
       conn
       |> Plug.Conn.assign(:today, today)
       |> Plug.Conn.assign(:events, events)
-      |> get(~p"/")
+      |> get(~p"/static")
 
     response = html_response(conn, 200)
 
@@ -91,7 +91,7 @@ defmodule WhereWeAreWeb.PageControllerTest do
       |> Plug.Conn.assign(:today, today)
       |> Plug.Conn.assign(:events, events)
       |> Plug.Conn.assign(:timezone, "America/Denver")
-      |> get(~p"/")
+      |> get(~p"/static")
 
     response = html_response(conn, 200)
 
@@ -106,7 +106,7 @@ defmodule WhereWeAreWeb.PageControllerTest do
     conn =
       conn
       |> Plug.Conn.assign(:today, today)
-      |> get(~p"/?month=#{Date.to_iso8601(displayed_month)}")
+      |> get(~p"/static?month=#{Date.to_iso8601(displayed_month)}")
 
     month_label = Calendar.strftime(displayed_month, "%B %Y")
     prev_month = displayed_month |> Date.add(-1) |> Date.beginning_of_month()
@@ -120,8 +120,8 @@ defmodule WhereWeAreWeb.PageControllerTest do
 
     assert response =~ month_label
     assert response =~ "Today"
-    assert response =~ ~s(href="/?month=#{Date.to_iso8601(prev_month)}")
-    assert response =~ ~s(href="/?month=#{Date.to_iso8601(next_month)}")
-    assert response =~ ~s(href="/?today=true")
+    assert response =~ ~s(href="/static?month=#{Date.to_iso8601(prev_month)}")
+    assert response =~ ~s(href="/static?month=#{Date.to_iso8601(next_month)}")
+    assert response =~ ~s(href="/static?today=true")
   end
 end
