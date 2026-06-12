@@ -100,14 +100,14 @@ defmodule WhereWeAre.CalendarSync.CaldavClient do
 
   defp finalize_event_accumulation({:error, _reason} = error), do: error
 
-  defp build_time_range_opts(%{event_window_months: 0}) do
+  defp build_time_range_opts(%{event_window_months: 0} = config) do
     today = Date.utc_today()
     window_open = today |> Date.beginning_of_month() |> to_datetime()
     window_close = today |> Date.end_of_month() |> to_datetime(:end_of_day)
-    [from: window_open, to: window_close]
+    [from: window_open, to: window_close] |> maybe_expand_recurrences(config)
   end
 
-  defp build_time_range_opts(%{event_window_months: months}) when is_integer(months) do
+  defp build_time_range_opts(%{event_window_months: months} = config) when is_integer(months) do
     today = Date.utc_today()
 
     window_open =
@@ -116,10 +116,15 @@ defmodule WhereWeAre.CalendarSync.CaldavClient do
     window_close =
       today |> Date.shift(month: months) |> Date.end_of_month() |> to_datetime(:end_of_day)
 
-    [from: window_open, to: window_close]
+    [from: window_open, to: window_close] |> maybe_expand_recurrences(config)
   end
 
   defp build_time_range_opts(_config), do: []
+
+  defp maybe_expand_recurrences(opts, %{expand_recurrences: true}),
+    do: Keyword.put(opts, :expand_recurrences, true)
+
+  defp maybe_expand_recurrences(opts, _config), do: opts
 
   defp to_datetime(date, :end_of_day) do
     DateTime.new!(date, ~T[23:59:59], "Etc/UTC")

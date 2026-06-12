@@ -18,6 +18,7 @@ defmodule WhereWeAre.CalendarSync.Config do
       client: WhereWeAre.CalendarSync.CaldavClient,
       poll_interval: :timer.minutes(10),
       event_window_months: parse_integer(System.get_env("CALDAV_EVENT_WINDOW_MONTHS"), 6),
+      expand_recurrences: parse_boolean(System.get_env("CALDAV_EXPAND_RECURRENCES"), true),
       credentials: credentials
     ]
   end
@@ -42,6 +43,12 @@ defmodule WhereWeAre.CalendarSync.Config do
       :error -> default
     end
   end
+
+  defp parse_boolean(nil, default), do: default
+  defp parse_boolean("", default), do: default
+  defp parse_boolean(value, _default) when value in ["true", "1"], do: true
+  defp parse_boolean(value, _default) when value in ["false", "0"], do: false
+  defp parse_boolean(_value, default), do: default
 
   defp maybe_put(map, _key, nil), do: map
   defp maybe_put(map, key, value), do: Map.put(map, key, value)
