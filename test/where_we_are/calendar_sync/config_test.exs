@@ -9,6 +9,7 @@ defmodule WhereWeAre.CalendarSync.ConfigTest do
     original_url = System.get_env("CALDAV_URL")
     original_calendars = System.get_env("CALDAV_CALENDARS")
     original_window = System.get_env("CALDAV_EVENT_WINDOW_MONTHS")
+    original_expand = System.get_env("CALDAV_EXPAND_RECURRENCES")
 
     on_exit(fn ->
       restore_env("CALDAV_USERNAME", original_username)
@@ -16,6 +17,7 @@ defmodule WhereWeAre.CalendarSync.ConfigTest do
       restore_env("CALDAV_URL", original_url)
       restore_env("CALDAV_CALENDARS", original_calendars)
       restore_env("CALDAV_EVENT_WINDOW_MONTHS", original_window)
+      restore_env("CALDAV_EXPAND_RECURRENCES", original_expand)
     end)
 
     :ok
@@ -30,6 +32,7 @@ defmodule WhereWeAre.CalendarSync.ConfigTest do
              client: WhereWeAre.CalendarSync.CaldavClient,
              poll_interval: :timer.minutes(10),
              event_window_months: 6,
+             expand_recurrences: true,
              credentials: %{
                username: "person@example.com",
                password: "app-specific-password"
@@ -47,6 +50,7 @@ defmodule WhereWeAre.CalendarSync.ConfigTest do
              client: WhereWeAre.CalendarSync.CaldavClient,
              poll_interval: :timer.minutes(10),
              event_window_months: 6,
+             expand_recurrences: true,
              credentials: %{
                username: "person@example.com",
                password: "app-specific-password"
@@ -64,6 +68,7 @@ defmodule WhereWeAre.CalendarSync.ConfigTest do
              client: WhereWeAre.CalendarSync.CaldavClient,
              poll_interval: :timer.minutes(10),
              event_window_months: 6,
+             expand_recurrences: true,
              credentials: %{
                username: "person@example.com",
                password: "app-specific-password"
@@ -81,6 +86,7 @@ defmodule WhereWeAre.CalendarSync.ConfigTest do
              client: WhereWeAre.CalendarSync.CaldavClient,
              poll_interval: :timer.minutes(10),
              event_window_months: 6,
+             expand_recurrences: true,
              credentials: %{
                username: "person@example.com",
                password: "app-specific-password",
@@ -96,5 +102,6 @@ defmodule WhereWeAre.CalendarSync.ConfigTest do
     System.delete_env("CALDAV_URL")
     System.delete_env("CALDAV_CALENDARS")
     System.delete_env("CALDAV_EVENT_WINDOW_MONTHS")
+    System.delete_env("CALDAV_EXPAND_RECURRENCES")
   end
 end

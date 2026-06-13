@@ -10,6 +10,8 @@ import Config
 config :where_we_are,
   generators: [timestamp_type: :utc_datetime]
 
+config :elixir, :time_zone_database, Tz.TimeZoneDatabase
+
 config :where_we_are, WhereWeAre.CalendarSync,
   client: WhereWeAre.CalendarSync.NoopClient,
   poll_interval: :timer.minutes(10),

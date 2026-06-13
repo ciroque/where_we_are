@@ -11,12 +11,12 @@ defmodule WhereWeAre.CalendarSync.CaldavClientTest do
 
     def list_calendars(caldav_client, :discovery_info) do
       send(Process.get(:test_pid), {:list_calendars, caldav_client})
-      {:ok, [%{url: "https://caldav.icloud.com/calendar/"}]}
+      {:ok, [%{url: "https://caldav.icloud.com/calendar/", display_name: "Home"}]}
     end
 
     def list_events(caldav_client, "https://caldav.icloud.com/calendar/", _opts) do
       send(Process.get(:test_pid), {:list_events, caldav_client})
-      {:ok, [:event]}
+      {:ok, [%{summary: "Test Event"}]}
     end
   end
 
@@ -49,7 +49,8 @@ defmodule WhereWeAre.CalendarSync.CaldavClientTest do
       client: FakeClient
     }
 
-    assert {:ok, [:event]} = CaldavClient.fetch_events(config)
+    assert {:ok, [%{summary: "Test Event", calendar_name: _}]} =
+             CaldavClient.fetch_events(config)
 
     assert_receive {:discover,
                     %CalDAVEx.Client{
@@ -70,7 +71,8 @@ defmodule WhereWeAre.CalendarSync.CaldavClientTest do
       url: "https://example.com/custom"
     }
 
-    assert {:ok, [:event]} = CaldavClient.fetch_events(config)
+    assert {:ok, [%{summary: "Test Event", calendar_name: _}]} =
+             CaldavClient.fetch_events(config)
 
     assert_receive {:discover,
                     %CalDAVEx.Client{
