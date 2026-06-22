@@ -101,7 +101,7 @@ defmodule WhereWeAreWeb.CalendarLive do
     |> assign(
       displayed_month: month,
       all_events: all_events,
-      known_calendars: Enum.uniq(known ++ MapSet.to_list(socket.assigns.selected_calendars))
+      known_calendars: Enum.uniq(known ++ MapSet.to_list(socket.assigns.selected_calendars)) |> Enum.sort()
     )
     |> assign_filtered_events()
   end
