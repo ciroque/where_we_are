@@ -104,11 +104,11 @@ events_by_date =
               <%= for event <- day_events do %>
                 <% local = WhereWeAreWeb.CalendarLive.to_local(event.dtstart, timezone) %>
                 <% color = WhereWeAreWeb.PageHTML.calendar_color(Map.get(event, :calendar_name)) %>
-                <span class={["block truncate rounded px-1 py-0.5 text-xs leading-tight", color.bg, color.text]} title={Map.get(event, :summary, "Untitled")}>
+                <span class={["flex flex-col rounded px-1.5 py-1 text-xs leading-tight", color.bg, color.text]} title={Map.get(event, :summary, "Untitled")}>
                   <%= if is_struct(local, DateTime) do %>
-                    <span class="font-semibold">{Calendar.strftime(local, "%-I:%M %p")}</span>
+                    <span class="font-bold opacity-75" style="font-size: 0.65rem;">{Calendar.strftime(local, "%-I:%M %p")}</span>
                   <% end %>
-                  {Map.get(event, :summary, "Untitled")}
+                  <span class="truncate">{Map.get(event, :summary, "Untitled")}</span>
                 </span>
               <% end %>
             </div>
