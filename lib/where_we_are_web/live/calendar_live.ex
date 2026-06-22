@@ -30,7 +30,8 @@ defmodule WhereWeAreWeb.CalendarLive do
        displayed_month: displayed_month,
        all_events: all_events,
        known_calendars: known_calendars,
-       selected_calendars: selected
+       selected_calendars: selected,
+       selected_event: nil
      )
      |> assign_filtered_events(), layout: false}
   end
@@ -64,6 +65,15 @@ defmodule WhereWeAreWeb.CalendarLive do
 
   def handle_event("today", _, socket) do
     {:noreply, push_patch(socket, to: ~p"/?today=true")}
+  end
+
+  def handle_event("show_event", %{"uid" => uid}, socket) do
+    event = Enum.find(socket.assigns.events, fn e -> Map.get(e, :uid) == uid end)
+    {:noreply, assign(socket, selected_event: event)}
+  end
+
+  def handle_event("close_event", _, socket) do
+    {:noreply, assign(socket, selected_event: nil)}
   end
 
   def handle_event("toggle_calendar", %{"name" => name}, socket) do
