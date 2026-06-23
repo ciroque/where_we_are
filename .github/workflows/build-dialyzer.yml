@@ -1,0 +1,65 @@
+name: Dialyzer
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  dialyzer:
+    name: Run dialyzer
+    runs-on: ubuntu-24.04
+
+    env:
+      MIX_HOME: ${{ github.workspace }}/.mix
+      HEX_HOME: ${{ github.workspace }}/.hex
+      MIX_ENV: dev
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare Mix environment directories
+        run: |
+          mkdir -p "$MIX_HOME/archives"
+          mkdir -p "$HEX_HOME"
+
+      - name: Set up Elixir
+        id: beam
+        uses: erlef/setup-beam@v1.20.4
+        with:
+          elixir-version: '1.19.5'
+          otp-version: '27.3.4'
+          version-type: strict
+          hexpm-mirrors: |
+            https://builds.hex.pm
+            https://cdn.jsdelivr.net/hex
+
+      - name: Set mix file hash
+        id: set_vars
+        run: |
+          mix_hash="${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}"
+          echo "mix_hash=$mix_hash" >> $GITHUB_OUTPUT
+
+      - name: Cache PLT files
+        id: cache-plt
+        uses: actions/cache@v4
+        with:
+          path: |
+            priv/plts
+            _build/dev/*.plt
+            _build/dev/*.plt.hash
+            ${{ github.workspace }}/.mix
+            ${{ github.workspace }}/.hex
+          key: plt-cache-${{ steps.beam.outputs['elixir-version'] }}-${{ steps.beam.outputs['otp-version'] }}-${{ steps.set_vars.outputs.mix_hash }}
+          restore-keys: |
+            plt-cache-${{ steps.beam.outputs['elixir-version'] }}-${{ steps.beam.outputs['otp-version'] }}-
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Run dialyzer
+        run: mix dialyzer --format short
