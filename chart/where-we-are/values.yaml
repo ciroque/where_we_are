@@ -1,0 +1,120 @@
+replicaCount: 1
+
+image:
+  repository: where-we-are
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  automount: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podLabels: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 4000
+  targetPort: 4000
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: where-we-are.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+certificate:
+  enabled: true
+  secretName: where-we-are-tls
+  issuerName: letsencrypt-prod
+  issuerKind: ClusterIssuer
+  dnsNames:
+    - where-we-are.wagner-x.net
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+livenessProbe:
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 30
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+env:
+  PHX_SERVER: "true"
+  PHX_HOST: "localhost"
+  PORT: "4000"
+
+# Use this to generate or set a secret key base.
+# If left empty, Helm will generate a random value on each install.
+secretKeyBase: ""
+
+# CalDAV configuration for calendar sync
+caldav:
+  calendars: "Family,P1 Primary,Steve,Lisa,Aspen"
+  url: "https://caldav.icloud.com"
+  username: ""
+  password: ""
+  eventWindowMonths: 14
+
+# Additional environment variables from secrets/configmaps
+extraEnv: []
+
+extraEnvFrom: []
