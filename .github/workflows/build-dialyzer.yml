@@ -38,12 +38,6 @@ jobs:
             https://builds.hex.pm
             https://cdn.jsdelivr.net/hex
 
-      - name: Set mix file hash
-        id: set_vars
-        run: |
-          mix_hash="${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}"
-          echo "mix_hash=$mix_hash" >> $GITHUB_OUTPUT
-
       - name: Cache PLT files
         id: cache-plt
         uses: actions/cache@v4
@@ -54,7 +48,7 @@ jobs:
             _build/dev/*.plt.hash
             ${{ github.workspace }}/.mix
             ${{ github.workspace }}/.hex
-          key: plt-cache-${{ steps.beam.outputs['elixir-version'] }}-${{ steps.beam.outputs['otp-version'] }}-${{ steps.set_vars.outputs.mix_hash }}
+          key: plt-cache-${{ steps.beam.outputs['elixir-version'] }}-${{ steps.beam.outputs['otp-version'] }}-${{ hashFiles('**/mix.lock') }}
           restore-keys: |
             plt-cache-${{ steps.beam.outputs['elixir-version'] }}-${{ steps.beam.outputs['otp-version'] }}-
 

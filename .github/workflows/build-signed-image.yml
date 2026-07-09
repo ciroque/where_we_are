@@ -9,11 +9,6 @@ on:
     branches:
       - "main"
   workflow_dispatch:
-    inputs:
-      image:
-        description: 'Where We Are'
-        required: true
-        default: 'ghcr.io/ciroque/where-we-are'
 
 env:
   REGISTRY: ghcr.io
@@ -28,7 +23,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-      id-token: write
       security-events: write
 
     steps:
@@ -48,23 +42,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-
-      - name: Set GIT_SHA
-        run: echo "GIT_SHA=${{ github.sha }}" >> $GITHUB_ENV
-
       - name: Build Docker Image
         id: docker-build-and-push
         uses: docker/build-push-action@v5
         with:
           build-args: |
             BUILD_NUMBER=${{ github.run_number }}
-            SECRET_KEY_BASE=${{ secrets.SECRET_KEY_BASE }}
             GIT_SHA=${{ github.sha }}
+          secrets: |
+            SECRET_KEY_BASE=${{ secrets.SECRET_KEY_BASE }}
           context: .
           file: ./Dockerfile
           push: true
@@ -81,7 +67,6 @@ jobs:
         env:
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-          DIGEST: ${{ steps.docker-build-and-push.outputs.digest }}
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master

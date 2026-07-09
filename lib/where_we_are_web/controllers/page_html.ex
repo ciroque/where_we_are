@@ -28,5 +28,12 @@ defmodule WhereWeAreWeb.PageHTML do
     Enum.at(@calendar_colors, index)
   end
 
+  def calendar_color(calendar_name, nil), do: calendar_color(calendar_name)
+
+  def calendar_color(_calendar_name, hex) when is_binary(hex) do
+    rgb = String.slice(hex, 0, 7)
+    %{bg: nil, text: nil, dot: nil, hex: rgb}
+  end
+
   embed_templates "page_html/*"
 end

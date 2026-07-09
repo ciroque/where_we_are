@@ -46,10 +46,10 @@ jobs:
             _build
             ${{ github.workspace }}/.mix
             ${{ github.workspace }}/.hex
-          key: ${{ runner.os }}-mix-${{ steps.beam.outputs['elixir-version'] }}-${{ steps.beam.outputs['otp-version'] }}-${{ hashFiles('**/mix.lock') }}
+          key: ${{ runner.os }}-ubuntu-24.04-mix-${{ steps.beam.outputs['elixir-version'] }}-${{ steps.beam.outputs['otp-version'] }}-${{ hashFiles('**/mix.lock') }}
           restore-keys: |
-            ${{ runner.os }}-mix-${{ steps.beam.outputs['elixir-version'] }}-${{ steps.beam.outputs['otp-version'] }}-
-            ${{ runner.os }}-mix-
+            ${{ runner.os }}-ubuntu-24.04-mix-${{ steps.beam.outputs['elixir-version'] }}-${{ steps.beam.outputs['otp-version'] }}-
+            ${{ runner.os }}-ubuntu-24.04-mix-
 
       - name: Install dependencies
         run: mix deps.get
