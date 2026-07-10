@@ -99,9 +99,7 @@ defmodule WhereWeAreWeb.CalendarLiveTest do
     assert html =~ "A test event description"
     assert html =~ "Test Calendar"
 
-    assert has_element?(view, "#event-modal button[aria-label='close']")
-
-    html = render_click(view, "close_event")
+    html = view |> element("#event-modal button[aria-label='Close']") |> render_click()
 
     refute html =~ "A test event description"
   end
