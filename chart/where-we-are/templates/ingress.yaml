@@ -20,10 +20,10 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "where-we-are.labels" . | nindent 4 }}
+  {{- if gt (len $ingressAnnotations) 0 }}
   annotations:
-    {{- with $ingressAnnotations }}
-    {{- toYaml . | nindent 4 }}
-    {{- end }}
+    {{- toYaml $ingressAnnotations | nindent 4 }}
+  {{- end }}
 spec:
   {{- if and .Values.ingress.className (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion) }}
   ingressClassName: {{ .Values.ingress.className }}
