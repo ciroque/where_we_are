@@ -92,7 +92,7 @@ defmodule WhereWeAre.CalendarSync.CaldavClient do
           Enum.map(calendar_events, fn event ->
             event
             |> Map.put(:calendar_name, calendar.display_name)
-            |> Map.put(:calendar_color, Map.get(calendar, :color))
+            |> Map.put(:calendar_color, Map.get(calendar, :color) || Map.get(calendar, "color"))
           end)
         {:cont, {:ok, [tagged | events]}}
 

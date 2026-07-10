@@ -3,7 +3,7 @@ defmodule WhereWeAreWeb.PageControllerTest do
 
   alias WhereWeAreWeb.PageHTML
 
-  describe "PageHTML.calendar_color/2" do
+  describe "PageHTML.calendar_color/1 and /2" do
     test "returns bg_style and text_style for an 8-char CalDAV hex" do
       color = PageHTML.calendar_color("My Calendar", "#FF2D55FF")
       assert color.bg_style == "background-color: #FF2D55"
