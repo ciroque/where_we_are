@@ -30,7 +30,10 @@ defmodule WhereWeAre.CalendarSync do
     GenServer.start_link(__MODULE__, opts, name: name)
   end
 
-  def topic(server \\ __MODULE__), do: "calendar_sync:#{server}"
+  def topic(server \\ __MODULE__) do
+    server_id = if is_atom(server), do: Atom.to_string(server), else: inspect(server)
+    "calendar_sync:" <> server_id
+  end
 
   def sync_now(server \\ __MODULE__) do
     GenServer.call(server, :sync_now)
