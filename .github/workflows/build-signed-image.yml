@@ -46,11 +46,6 @@ jobs:
         id: docker-build-and-push
         uses: docker/build-push-action@v5
         with:
-          build-args: |
-            BUILD_NUMBER=${{ github.run_number }}
-            GIT_SHA=${{ github.sha }}
-          secrets: |
-            SECRET_KEY_BASE=${{ secrets.SECRET_KEY_BASE }}
           context: .
           file: ./Dockerfile
           push: true
