@@ -51,12 +51,11 @@ ingress:
   tls: []
 
 certificate:
-  enabled: true
+  enabled: false
   secretName: where-we-are-tls
   issuerName: letsencrypt-prod
   issuerKind: ClusterIssuer
-  dnsNames:
-    - where-we-are.wagner-x.net
+  dnsNames: []
 
 resources:
   limits:
