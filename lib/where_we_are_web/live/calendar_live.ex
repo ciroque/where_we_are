@@ -51,7 +51,24 @@ defmodule WhereWeAreWeb.CalendarLive do
 
   @impl true
   def handle_info(:events_updated, socket) do
-    {:noreply, load_month(socket, socket.assigns.displayed_month)}
+    %{calendar_sync: calendar_sync, displayed_month: month, selected_calendars: selected} =
+      socket.assigns
+
+    all_events = WhereWeAre.CalendarSync.events_for_month(calendar_sync, month)
+    {known_calendars, calendar_colors} = fetch_known_calendars(calendar_sync, all_events)
+
+    new_calendars = Enum.reject(known_calendars, &MapSet.member?(selected, &1))
+    selected = MapSet.union(selected, MapSet.new(new_calendars))
+
+    {:noreply,
+     socket
+     |> assign(
+       all_events: all_events,
+       known_calendars: known_calendars,
+       calendar_colors: calendar_colors,
+       selected_calendars: selected
+     )
+     |> assign_filtered_events()}
   end
 
   @impl true
