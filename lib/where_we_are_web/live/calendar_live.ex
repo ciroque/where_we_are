@@ -125,7 +125,17 @@ defmodule WhereWeAreWeb.CalendarLive do
         MapSet.member?(selected, Map.get(event, :calendar_name))
       end)
 
-    assign(socket, events: events)
+    selected_event =
+      with %{uid: uid} <- socket.assigns.selected_event,
+           event <- Enum.find(events, &(Map.get(&1, :uid) == uid)) do
+        event
+      else
+        _ -> nil
+      end
+
+    socket
+    |> assign(events: events)
+    |> assign(selected_event: selected_event)
   end
 
   defp derive_known_calendars(events) do
