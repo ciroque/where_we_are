@@ -175,7 +175,7 @@ defmodule WhereWeAreWeb.CalendarLiveTest do
       dtstart: Date.utc_today()
     }]})
 
-    Phoenix.PubSub.broadcast(WhereWeAre.PubSub, WhereWeAre.CalendarSync.topic(), :events_updated)
+    Phoenix.PubSub.broadcast(WhereWeAre.PubSub, WhereWeAre.CalendarSync.topic(server_name), :events_updated)
 
     assert render(view) =~ "New Event"
   end

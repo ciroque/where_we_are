@@ -15,6 +15,7 @@ defmodule WhereWeAre.CalendarSync do
   end
 
   defstruct client: nil,
+            name: nil,
             poll_interval: @default_poll_interval,
             event_window_months: 6,
             expand_recurrences: true,
@@ -28,6 +29,8 @@ defmodule WhereWeAre.CalendarSync do
     name = Keyword.get(opts, :name, __MODULE__)
     GenServer.start_link(__MODULE__, opts, name: name)
   end
+
+  def topic(server \\ __MODULE__), do: "calendar_sync:#{server}"
 
   def sync_now(server \\ __MODULE__) do
     GenServer.call(server, :sync_now)
@@ -53,6 +56,7 @@ defmodule WhereWeAre.CalendarSync do
   def init(opts) do
     state = %__MODULE__{
       client: Keyword.get(opts, :client, NoopClient),
+      name: Keyword.get(opts, :name, __MODULE__),
       poll_interval: Keyword.get(opts, :poll_interval, @default_poll_interval),
       event_window_months: Keyword.get(opts, :event_window_months, 6),
       expand_recurrences: Keyword.get(opts, :expand_recurrences, true),
@@ -114,8 +118,6 @@ defmodule WhereWeAre.CalendarSync do
     {:noreply, state}
   end
 
-  def topic, do: "calendar_sync"
-
   defp sync(state) do
     config =
       state.credentials
@@ -125,7 +127,7 @@ defmodule WhereWeAre.CalendarSync do
     case state.client.fetch_events(config) do
       {:ok, events} ->
         state = %{state | events: events, last_sync: DateTime.utc_now(), last_error: nil}
-        Phoenix.PubSub.broadcast(WhereWeAre.PubSub, topic(), :events_updated)
+        Phoenix.PubSub.broadcast(WhereWeAre.PubSub, topic(state.name), :events_updated)
         {{:ok, events}, state}
 
       {:error, reason} ->

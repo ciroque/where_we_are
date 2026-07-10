@@ -15,14 +15,14 @@ defmodule WhereWeAreWeb.CalendarLive do
 
   @impl true
   def mount(params, session, socket) do
-    if connected?(socket) do
-      Phoenix.PubSub.subscribe(WhereWeAre.PubSub, WhereWeAre.CalendarSync.topic())
-    end
-
     timezone = resolve_timezone(session)
     today = DateTime.now!(timezone) |> DateTime.to_date()
     displayed_month = resolve_displayed_month(params, today)
     calendar_sync = resolve_calendar_sync(session)
+
+    if connected?(socket) do
+      Phoenix.PubSub.subscribe(WhereWeAre.PubSub, WhereWeAre.CalendarSync.topic(calendar_sync))
+    end
     all_events = WhereWeAre.CalendarSync.events_for_month(calendar_sync, displayed_month)
     {known_calendars, calendar_colors} = fetch_known_calendars(calendar_sync, all_events)
 
@@ -51,13 +51,18 @@ defmodule WhereWeAreWeb.CalendarLive do
 
   @impl true
   def handle_info(:events_updated, socket) do
-    %{calendar_sync: calendar_sync, displayed_month: month, selected_calendars: selected} =
-      socket.assigns
+    %{
+      calendar_sync: calendar_sync,
+      displayed_month: month,
+      selected_calendars: selected,
+      known_calendars: prev_known
+    } = socket.assigns
 
     all_events = WhereWeAre.CalendarSync.events_for_month(calendar_sync, month)
     {known_calendars, calendar_colors} = fetch_known_calendars(calendar_sync, all_events)
 
-    new_calendars = Enum.reject(known_calendars, &MapSet.member?(selected, &1))
+    prev_known_set = MapSet.new(prev_known)
+    new_calendars = Enum.reject(known_calendars, &MapSet.member?(prev_known_set, &1))
     selected = MapSet.union(selected, MapSet.new(new_calendars))
 
     {:noreply,
