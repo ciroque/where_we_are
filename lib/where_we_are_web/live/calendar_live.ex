@@ -187,7 +187,7 @@ defmodule WhereWeAreWeb.CalendarLive do
       end)
       |> Map.new()
 
-    Map.merge(event_colors, server_colors)
+    Map.merge(event_colors, server_colors, fn _name, event_color, server_color -> server_color || event_color end)
   end
 
   defp configured_calendars(calendar_sync) do
