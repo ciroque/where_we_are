@@ -15,6 +15,7 @@ defmodule WhereWeAre.CalendarSync do
   end
 
   defstruct client: nil,
+            name: nil,
             poll_interval: @default_poll_interval,
             event_window_months: 6,
             expand_recurrences: true,
@@ -27,6 +28,11 @@ defmodule WhereWeAre.CalendarSync do
   def start_link(opts) do
     name = Keyword.get(opts, :name, __MODULE__)
     GenServer.start_link(__MODULE__, opts, name: name)
+  end
+
+  def topic(server \\ __MODULE__) do
+    server_id = if is_atom(server), do: Atom.to_string(server), else: inspect(server)
+    "calendar_sync:" <> server_id
   end
 
   def sync_now(server \\ __MODULE__) do
@@ -53,6 +59,7 @@ defmodule WhereWeAre.CalendarSync do
   def init(opts) do
     state = %__MODULE__{
       client: Keyword.get(opts, :client, NoopClient),
+      name: Keyword.get(opts, :name, __MODULE__),
       poll_interval: Keyword.get(opts, :poll_interval, @default_poll_interval),
       event_window_months: Keyword.get(opts, :event_window_months, 6),
       expand_recurrences: Keyword.get(opts, :expand_recurrences, true),
@@ -81,6 +88,12 @@ defmodule WhereWeAre.CalendarSync do
   def handle_call(:list_calendars, _from, state) do
     reply = state.client.list_calendars(state.credentials)
     {:reply, reply, state}
+  end
+
+  if Mix.env() == :test do
+    def handle_call({:set_events, events}, _from, state) when is_list(events) do
+      {:reply, :ok, %{state | events: events}}
+    end
   end
 
   def handle_call({:events_for_month, month_start}, _from, state) do
@@ -117,6 +130,7 @@ defmodule WhereWeAre.CalendarSync do
     case state.client.fetch_events(config) do
       {:ok, events} ->
         state = %{state | events: events, last_sync: DateTime.utc_now(), last_error: nil}
+        Phoenix.PubSub.broadcast(WhereWeAre.PubSub, topic(state.name), :events_updated)
         {{:ok, events}, state}
 
       {:error, reason} ->

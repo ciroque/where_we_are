@@ -146,6 +146,40 @@ defmodule WhereWeAreWeb.CalendarLiveTest do
     assert has_element?(view, "button", "Work")
   end
 
+  test "refreshes events when :events_updated is broadcast", %{conn: conn} do
+    server_name = __MODULE__
+
+    defmodule PubSubSyncClient do
+      def list_calendars(_config), do: {:ok, [%{display_name: "Work"}]}
+      def fetch_events(_config), do: {:ok, []}
+    end
+
+    start_supervised!(
+      {WhereWeAre.CalendarSync,
+       name: server_name,
+       schedule?: false,
+       client: PubSubSyncClient,
+       credentials: %{calendars: ["Work"]},
+       initial_events: []}
+    )
+
+    conn = conn |> init_test_session(%{"calendar_sync" => Atom.to_string(server_name)})
+
+    {:ok, view, html} = live(conn, ~p"/")
+    refute html =~ "New Event"
+
+    :ok = GenServer.call(server_name, {:set_events, [%{
+      uid: "new-1",
+      summary: "New Event",
+      calendar_name: "Work",
+      dtstart: Date.utc_today()
+    }]})
+
+    Phoenix.PubSub.broadcast(WhereWeAre.PubSub, WhereWeAre.CalendarSync.topic(server_name), :events_updated)
+
+    assert render(view) =~ "New Event"
+  end
+
   test "filter button uses hex inline style when calendar has a color", %{conn: conn} do
     server_name = __MODULE__
 
