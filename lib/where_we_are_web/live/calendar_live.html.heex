@@ -57,7 +57,7 @@ events_by_date =
             class={[
               "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition cursor-pointer",
               if(selected?,
-                do: "#{color.bg} #{color.text} border-transparent",
+                do: [color.bg, color.text, "border-transparent"],
                 else: "bg-white text-zinc-400 border-zinc-200 line-through"
               )
             ]}
