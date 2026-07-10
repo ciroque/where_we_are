@@ -101,8 +101,8 @@ env:
   PHX_HOST: "localhost"
   PORT: "4000"
 
-# Use this to generate or set a secret key base.
-# If left empty, Helm will generate a random value on each install.
+# Secret key base used by Phoenix to sign/encrypt cookies (SECRET_KEY_BASE).
+# Must be set and remain stable across upgrades.
 secretKeyBase: ""
 
 # CalDAV configuration for calendar sync
