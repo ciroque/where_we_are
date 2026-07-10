@@ -20,10 +20,11 @@ defmodule WhereWeAreWeb.CalendarLive do
     displayed_month = resolve_displayed_month(params, today)
     calendar_sync = resolve_calendar_sync(session)
 
-    if connected?(socket) do
-      Phoenix.PubSub.subscribe(WhereWeAre.PubSub, WhereWeAre.CalendarSync.topic(calendar_sync))
-      schedule_day_refresh(today, timezone)
-    end
+    day_refresh_ref =
+      if connected?(socket) do
+        Phoenix.PubSub.subscribe(WhereWeAre.PubSub, WhereWeAre.CalendarSync.topic(calendar_sync))
+        schedule_day_refresh(today, timezone)
+      end
     all_events = WhereWeAre.CalendarSync.events_for_month(calendar_sync, displayed_month)
     {known_calendars, calendar_colors} = fetch_known_calendars(calendar_sync, all_events)
 
@@ -45,17 +46,19 @@ defmodule WhereWeAreWeb.CalendarLive do
        calendar_colors: calendar_colors,
        selected_calendars: selected,
        selected_event: nil,
-       show_filter_notice: configured_calendars(calendar_sync) == []
+       show_filter_notice: configured_calendars(calendar_sync) == [],
+       day_refresh_ref: day_refresh_ref
      )
      |> assign_filtered_events(), layout: false}
   end
 
   @impl true
   def handle_info(:day_changed, socket) do
-    %{timezone: timezone} = socket.assigns
+    %{timezone: timezone, day_refresh_ref: old_ref} = socket.assigns
+    if old_ref, do: Process.cancel_timer(old_ref)
     today = DateTime.now!(timezone) |> DateTime.to_date()
-    schedule_day_refresh(today, timezone)
-    {:noreply, assign(socket, today: today) |> assign_filtered_events()}
+    ref = schedule_day_refresh(today, timezone)
+    {:noreply, socket |> assign(today: today, day_refresh_ref: ref) |> assign_filtered_events()}
   end
 
   @impl true
