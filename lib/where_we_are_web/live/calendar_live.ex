@@ -157,7 +157,12 @@ defmodule WhereWeAreWeb.CalendarLive do
   defp resolve_selected_calendars(_session, _known_calendars), do: :all
 
   defp resolve_calendar_sync(%{"calendar_sync" => name}) when is_binary(name) do
-    String.to_existing_atom(name)
+    atom = String.to_existing_atom(name)
+
+    case Process.whereis(atom) do
+      nil -> WhereWeAre.CalendarSync
+      _pid -> atom
+    end
   rescue
     ArgumentError -> WhereWeAre.CalendarSync
   end
