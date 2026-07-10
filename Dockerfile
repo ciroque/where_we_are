@@ -8,9 +8,6 @@ FROM elixir:1.19-slim AS builder
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
     git \
     ca-certificates \
-    curl \
-    nodejs \
-    npm \
     && rm -rf /var/lib/apt/lists/*
 
 # Prepare build directory
