@@ -146,6 +146,30 @@ defmodule WhereWeAreWeb.CalendarLiveTest do
     assert has_element?(view, "button", "Work")
   end
 
+  test "filter button uses hex inline style when calendar has a color", %{conn: conn} do
+    server_name = __MODULE__
+
+    defmodule ColoredCalendarClient do
+      def list_calendars(_config), do: {:ok, [%{display_name: "Home", color: "#FF2D55FF"}]}
+      def fetch_events(_config), do: {:ok, []}
+    end
+
+    start_supervised!(
+      {WhereWeAre.CalendarSync,
+       name: server_name,
+       schedule?: false,
+       client: ColoredCalendarClient,
+       credentials: %{calendars: ["Home"]},
+       initial_events: []}
+    )
+
+    conn = conn |> init_test_session(%{"calendar_sync" => Atom.to_string(server_name)})
+
+    {:ok, _view, html} = live(conn, ~p"/")
+
+    assert html =~ "background-color: #FF2D55"
+  end
+
   test "show_event opens modal and close_event closes it", %{conn: conn} do
     today = Date.utc_today()
     server_name = __MODULE__
