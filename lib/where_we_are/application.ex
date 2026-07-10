@@ -9,7 +9,6 @@ defmodule WhereWeAre.Application do
   def start(_type, _args) do
     children = [
       WhereWeAreWeb.Telemetry,
-      {DNSCluster, query: Application.get_env(:where_we_are, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: WhereWeAre.PubSub},
       {WhereWeAre.CalendarSync, Application.get_env(:where_we_are, WhereWeAre.CalendarSync, [])},
       # Start to serve requests, typically the last entry
