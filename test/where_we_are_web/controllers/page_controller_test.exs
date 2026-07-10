@@ -1,6 +1,42 @@
 defmodule WhereWeAreWeb.PageControllerTest do
   use WhereWeAreWeb.ConnCase
 
+  alias WhereWeAreWeb.PageHTML
+
+  describe "PageHTML.calendar_color/2" do
+    test "returns bg_style and text_style for an 8-char CalDAV hex" do
+      color = PageHTML.calendar_color("My Calendar", "#FF2D55FF")
+      assert color.bg_style == "background-color: #FF2D55"
+      assert color.text_style == "color: #ffffff"
+      assert color.bg == nil
+      assert color.text == nil
+    end
+
+    test "returns bg_style and text_style for a 6-char hex" do
+      color = PageHTML.calendar_color("My Calendar", "#FF2D55")
+      assert color.bg_style == "background-color: #FF2D55"
+      assert color.text_style == "color: #ffffff"
+    end
+
+    test "picks dark text for a light hex color" do
+      color = PageHTML.calendar_color("My Calendar", "#FFFFFF")
+      assert color.text_style == "color: #111827"
+    end
+
+    test "falls back to Tailwind classes when hex is nil" do
+      color = PageHTML.calendar_color("My Calendar", nil)
+      assert is_binary(color.bg)
+      assert is_binary(color.text)
+      refute Map.has_key?(color, :bg_style)
+    end
+
+    test "falls back to Tailwind classes when name is nil" do
+      color = PageHTML.calendar_color(nil)
+      assert is_binary(color.bg)
+      assert is_binary(color.text)
+    end
+  end
+
   test "GET / shows current month calendar", %{conn: conn} do
     today = ~D[2024-01-15]
 

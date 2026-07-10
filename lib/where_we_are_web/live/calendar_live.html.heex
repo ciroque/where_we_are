@@ -48,7 +48,7 @@ events_by_date =
       <%= if @known_calendars != [] do %>
         <span class="mx-2 h-6 w-px bg-zinc-200"></span>
         <%= for cal_name <- @known_calendars do %>
-          <% color = WhereWeAreWeb.PageHTML.calendar_color(cal_name) %>
+          <% color = WhereWeAreWeb.PageHTML.calendar_color(cal_name, Map.get(@calendar_colors, cal_name)) %>
           <% selected? = MapSet.member?(@selected_calendars, cal_name) %>
           <button
             phx-click="toggle_calendar"
@@ -61,8 +61,8 @@ events_by_date =
                 else: "bg-white text-zinc-400 border-zinc-200 line-through"
               )
             ]}
+            style={if(selected? and Map.get(color, :bg_style), do: "#{color.bg_style}; #{color.text_style}")}
           >
-            <span class={["h-2 w-2 rounded-full", if(selected?, do: color.dot, else: "bg-zinc-300")]}></span>
             {cal_name}
           </button>
         <% end %>
@@ -119,12 +119,13 @@ events_by_date =
             <div class="mt-1 flex flex-col gap-0.5">
               <%= for event <- day_events do %>
                 <% local = WhereWeAreWeb.CalendarLive.to_local(event.dtstart, timezone) %>
-                <% color = WhereWeAreWeb.PageHTML.calendar_color(Map.get(event, :calendar_name)) %>
+                <% color = WhereWeAreWeb.PageHTML.calendar_color(Map.get(event, :calendar_name), Map.get(event, :calendar_color)) %>
 <button
   type="button"
   phx-click="show_event"
   phx-value-uid={Map.get(event, :uid)}
   class={["w-full text-left flex flex-col rounded px-1.5 py-1 text-xs leading-tight cursor-pointer hover:brightness-95 transition", color.bg, color.text]}
+  style={if Map.get(color, :bg_style), do: "#{color.bg_style}; #{color.text_style}"}
   title={Map.get(event, :summary, "Untitled")}
 >
                   <%= if is_struct(local, DateTime) do %>
@@ -157,8 +158,7 @@ events_by_date =
               <%= for event <- upcoming_events do %>
                 <li class="flex items-center gap-4 px-5 py-4">
                   <% local = WhereWeAreWeb.CalendarLive.to_local(event.dtstart, timezone) %>
-                  <% color = WhereWeAreWeb.PageHTML.calendar_color(Map.get(event, :calendar_name)) %>
-                  <span class={["h-2.5 w-2.5 shrink-0 rounded-full", color.dot]}></span>
+                  <% color = WhereWeAreWeb.PageHTML.calendar_color(Map.get(event, :calendar_name), Map.get(event, :calendar_color)) %>
                   <time
                     datetime={
                       if is_struct(local, DateTime),
@@ -190,8 +190,7 @@ events_by_date =
               <%= for event <- past_events do %>
                 <li class="flex items-center gap-4 px-5 py-4 opacity-60">
                   <% local = WhereWeAreWeb.CalendarLive.to_local(event.dtstart, timezone) %>
-                  <% color = WhereWeAreWeb.PageHTML.calendar_color(Map.get(event, :calendar_name)) %>
-                  <span class={["h-2.5 w-2.5 shrink-0 rounded-full", color.dot]}></span>
+                  <% color = WhereWeAreWeb.PageHTML.calendar_color(Map.get(event, :calendar_name), Map.get(event, :calendar_color)) %>
                   <time
                     datetime={
                       if is_struct(local, DateTime),
@@ -224,7 +223,7 @@ events_by_date =
      ev_local = WhereWeAreWeb.CalendarLive.to_local(Map.get(ev, :dtstart), @timezone)
      ev_end = Map.get(ev, :dtend)
      ev_end_local = if ev_end, do: WhereWeAreWeb.CalendarLive.to_local(ev_end, @timezone), else: nil
-     ev_color = WhereWeAreWeb.PageHTML.calendar_color(Map.get(ev, :calendar_name))
+     ev_color = WhereWeAreWeb.PageHTML.calendar_color(Map.get(ev, :calendar_name), Map.get(ev, :calendar_color))
   %>
   <div id="event-modal" class="fixed inset-0 z-50">
     <div
@@ -250,7 +249,6 @@ events_by_date =
         </button>
 
         <div class="flex items-start gap-3 mb-4">
-          <span class={["mt-1 h-3 w-3 shrink-0 rounded-full", ev_color.dot]}></span>
           <div>
             <p class="text-xs font-semibold uppercase tracking-widest text-zinc-400">
               {Map.get(ev, :calendar_name, "")}

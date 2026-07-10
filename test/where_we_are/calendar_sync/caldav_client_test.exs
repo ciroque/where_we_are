@@ -14,8 +14,8 @@ defmodule WhereWeAre.CalendarSync.CaldavClientTest do
 
       {:ok,
        [
-         %{url: "https://caldav.icloud.com/calendar/", display_name: "Home"},
-         %{url: "https://caldav.icloud.com/work/", display_name: "Work"}
+         %{url: "https://caldav.icloud.com/calendar/", display_name: "Home", color: "#FF2D55FF"},
+         %{url: "https://caldav.icloud.com/work/", display_name: "Work", color: nil}
        ]}
     end
 
@@ -55,7 +55,7 @@ defmodule WhereWeAre.CalendarSync.CaldavClientTest do
       calendars: ["Home"]
     }
 
-    assert {:ok, [%{summary: "Test Event", calendar_name: "Home"}]} =
+    assert {:ok, [%{summary: "Test Event", calendar_name: "Home", calendar_color: "#FF2D55FF"}]} =
              CaldavClient.fetch_events(config)
 
     assert_receive {:discover,
@@ -78,7 +78,7 @@ defmodule WhereWeAre.CalendarSync.CaldavClientTest do
       calendars: ["Home"]
     }
 
-    assert {:ok, [%{summary: "Test Event", calendar_name: "Home"}]} =
+    assert {:ok, [%{summary: "Test Event", calendar_name: "Home", calendar_color: "#FF2D55FF"}]} =
              CaldavClient.fetch_events(config)
 
     assert_receive {:discover,
