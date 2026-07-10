@@ -22,6 +22,7 @@ defmodule WhereWeAreWeb.CalendarLive do
 
     if connected?(socket) do
       Phoenix.PubSub.subscribe(WhereWeAre.PubSub, WhereWeAre.CalendarSync.topic(calendar_sync))
+      schedule_day_refresh(today, timezone)
     end
     all_events = WhereWeAre.CalendarSync.events_for_month(calendar_sync, displayed_month)
     {known_calendars, calendar_colors} = fetch_known_calendars(calendar_sync, all_events)
@@ -47,6 +48,14 @@ defmodule WhereWeAreWeb.CalendarLive do
        show_filter_notice: configured_calendars(calendar_sync) == []
      )
      |> assign_filtered_events(), layout: false}
+  end
+
+  @impl true
+  def handle_info(:day_changed, socket) do
+    %{timezone: timezone} = socket.assigns
+    today = DateTime.now!(timezone) |> DateTime.to_date()
+    schedule_day_refresh(today, timezone)
+    {:noreply, assign(socket, today: today) |> assign_filtered_events()}
   end
 
   @impl true
@@ -305,5 +314,11 @@ defmodule WhereWeAreWeb.CalendarLive do
       %DateTime{} = dt -> dt |> DateTime.shift_zone!(timezone) |> DateTime.to_date()
       %Date{} = d -> d
     end
+  end
+
+  defp schedule_day_refresh(today, timezone) do
+    midnight = DateTime.new!(Date.add(today, 1), ~T[00:00:00], timezone)
+    ms = DateTime.diff(midnight, DateTime.now!(timezone), :millisecond)
+    Process.send_after(self(), :day_changed, ms)
   end
 end
