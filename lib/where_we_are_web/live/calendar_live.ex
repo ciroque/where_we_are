@@ -143,8 +143,10 @@ defmodule WhereWeAreWeb.CalendarLive do
   end
 
   defp fetch_known_calendars(calendar_sync, all_events) do
+    calendars_result = WhereWeAre.CalendarSync.list_calendars(calendar_sync)
+
     names =
-      case WhereWeAre.CalendarSync.list_calendars(calendar_sync) do
+      case calendars_result do
         {:ok, calendars} when is_list(calendars) and calendars != [] ->
           Enum.map(calendars, &calendar_name/1)
 
@@ -158,14 +160,14 @@ defmodule WhereWeAreWeb.CalendarLive do
       |> Enum.uniq()
       |> Enum.sort()
 
-    colors = derive_calendar_colors(calendar_sync, all_events)
+    colors = derive_calendar_colors(calendars_result, all_events)
 
     {names, colors}
   end
 
-  defp derive_calendar_colors(calendar_sync, all_events) do
+  defp derive_calendar_colors(calendars_result, all_events) do
     server_colors =
-      case WhereWeAre.CalendarSync.list_calendars(calendar_sync) do
+      case calendars_result do
         {:ok, calendars} when is_list(calendars) and calendars != [] ->
           Map.new(calendars, fn cal ->
             {calendar_name(cal), Map.get(cal, :color)}
