@@ -72,4 +72,35 @@ defmodule WhereWeAreWeb.CalendarLiveTest do
     # Toggle is a no-op when there are no events/calendars, just verify it doesn't crash
     assert render(view) =~ "Where We Are"
   end
+
+  test "show_event opens modal and close_event closes it", %{conn: conn} do
+    today = Date.utc_today()
+    server_name = __MODULE__
+
+    event = %{
+      uid: "test-event-uid",
+      summary: "Test Event",
+      calendar_name: "Test Calendar",
+      dtstart: today,
+      description: "A test event description"
+    }
+
+    start_supervised!(
+      {WhereWeAre.CalendarSync, name: server_name, schedule?: false, initial_events: [event]}
+    )
+
+    conn = conn |> init_test_session(%{"calendar_sync" => Atom.to_string(server_name)})
+
+    {:ok, view, _html} = live(conn, ~p"/")
+
+    html = view |> element("button", "Test Event") |> render_click()
+
+    assert html =~ "Test Event"
+    assert html =~ "A test event description"
+    assert html =~ "Test Calendar"
+
+    html = view |> element("div[phx-click='close_event']") |> render_click()
+
+    refute html =~ "A test event description"
+  end
 end

@@ -2,10 +2,15 @@ defmodule WhereWeAreWeb.CalendarLive do
   use WhereWeAreWeb, :live_view
 
   def session(conn) do
-    %{
+    session = %{
       "tz" => conn.cookies["tz"] || "",
       "selected_calendars" => conn.cookies["selected_calendars"] || ""
     }
+
+    case Plug.Conn.get_session(conn, "calendar_sync") do
+      nil -> session
+      name -> Map.put(session, "calendar_sync", name)
+    end
   end
 
   @impl true
@@ -13,7 +18,8 @@ defmodule WhereWeAreWeb.CalendarLive do
     timezone = resolve_timezone(session)
     today = DateTime.now!(timezone) |> DateTime.to_date()
     displayed_month = resolve_displayed_month(params, today)
-    all_events = WhereWeAre.CalendarSync.events_for_month(displayed_month)
+    calendar_sync = resolve_calendar_sync(session)
+    all_events = WhereWeAre.CalendarSync.events_for_month(calendar_sync, displayed_month)
     known_calendars = derive_known_calendars(all_events)
 
     selected =
@@ -28,6 +34,7 @@ defmodule WhereWeAreWeb.CalendarLive do
        today: today,
        timezone: timezone,
        displayed_month: displayed_month,
+       calendar_sync: calendar_sync,
        all_events: all_events,
        known_calendars: known_calendars,
        selected_calendars: selected,
@@ -98,7 +105,7 @@ defmodule WhereWeAreWeb.CalendarLive do
   end
 
   defp load_month(socket, month) do
-    all_events = WhereWeAre.CalendarSync.events_for_month(month)
+    all_events = WhereWeAre.CalendarSync.events_for_month(socket.assigns.calendar_sync, month)
     known = derive_known_calendars(all_events)
 
     socket
@@ -138,6 +145,16 @@ defmodule WhereWeAreWeb.CalendarLive do
   end
 
   defp resolve_selected_calendars(_session, _known_calendars), do: :all
+
+  defp resolve_calendar_sync(%{"calendar_sync" => name}) when is_binary(name) do
+    try do
+      String.to_existing_atom(name)
+    rescue
+      ArgumentError -> WhereWeAre.CalendarSync
+    end
+  end
+
+  defp resolve_calendar_sync(_session), do: WhereWeAre.CalendarSync
 
   defp resolve_timezone(%{"tz" => tz}) when is_binary(tz) and tz != "" do
     case DateTime.now(tz) do
