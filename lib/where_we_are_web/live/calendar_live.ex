@@ -317,8 +317,17 @@ defmodule WhereWeAreWeb.CalendarLive do
   end
 
   defp schedule_day_refresh(today, timezone) do
-    midnight = DateTime.new!(Date.add(today, 1), ~T[00:00:00], timezone)
-    ms = DateTime.diff(midnight, DateTime.now!(timezone), :millisecond)
+    now = DateTime.now!(timezone)
+    tomorrow = Date.add(today, 1)
+
+    midnight =
+      case DateTime.new(tomorrow, ~T[00:00:00], timezone) do
+        {:ok, dt} -> dt
+        {:ambiguous, dt, _} -> dt
+        {:gap, _, dt} -> dt
+      end
+
+    ms = max(0, DateTime.diff(midnight, now, :millisecond))
     Process.send_after(self(), :day_changed, ms)
   end
 end
