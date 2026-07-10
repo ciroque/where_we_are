@@ -53,10 +53,12 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
     openssl \
     && rm -rf /var/lib/apt/lists/*
 
-# Create non-root user
-RUN useradd -r -s /bin/false -d /app -M appuser
+# Create non-root user (UID/GID 1000 to match Helm chart defaults)
+RUN groupadd -g 1000 appuser && \
+    useradd -u 1000 -g 1000 -s /usr/sbin/nologin -d /app -M appuser
 
 WORKDIR /app
+RUN chown appuser:appuser /app
 
 # Copy release from builder stage
 COPY --from=builder --chown=appuser:appuser /app/_build/prod/rel/where_we_are ./
