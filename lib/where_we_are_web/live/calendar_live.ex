@@ -169,9 +169,10 @@ defmodule WhereWeAreWeb.CalendarLive do
     server_colors =
       case calendars_result do
         {:ok, calendars} when is_list(calendars) and calendars != [] ->
-          Map.new(calendars, fn cal ->
-            {calendar_name(cal), Map.get(cal, :color)}
-          end)
+          calendars
+          |> Enum.map(fn cal -> {calendar_name(cal), Map.get(cal, :color) || Map.get(cal, "color")} end)
+          |> Enum.reject(fn {name, _color} -> is_nil(name) end)
+          |> Map.new()
 
         _ ->
           %{}
@@ -181,8 +182,8 @@ defmodule WhereWeAreWeb.CalendarLive do
       all_events
       |> Enum.flat_map(fn event ->
         case {Map.get(event, :calendar_name), Map.get(event, :calendar_color)} do
-          {nil, _} -> []
-          {name, color} -> [{name, color}]
+          {name, color} when is_binary(name) and not is_nil(color) -> [{name, color}]
+          _ -> []
         end
       end)
       |> Map.new()
