@@ -58,7 +58,7 @@ defmodule WhereWeAreWeb.CalendarLive do
     if old_ref, do: Process.cancel_timer(old_ref)
     today = DateTime.now!(timezone) |> DateTime.to_date()
     ref = schedule_day_refresh(today, timezone)
-    {:noreply, socket |> assign(today: today, day_refresh_ref: ref) |> assign_filtered_events()}
+    {:noreply, assign(socket, today: today, day_refresh_ref: ref)}
   end
 
   @impl true
