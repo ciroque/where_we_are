@@ -20,7 +20,7 @@ defmodule WhereWeAreWeb.CalendarLive do
     displayed_month = resolve_displayed_month(params, today)
     calendar_sync = resolve_calendar_sync(session)
     all_events = WhereWeAre.CalendarSync.events_for_month(calendar_sync, displayed_month)
-    known_calendars = fetch_known_calendars(calendar_sync, all_events)
+    {known_calendars, calendar_colors} = fetch_known_calendars(calendar_sync, all_events)
 
     selected =
       case resolve_selected_calendars(session, known_calendars) do
@@ -37,6 +37,7 @@ defmodule WhereWeAreWeb.CalendarLive do
        calendar_sync: calendar_sync,
        all_events: all_events,
        known_calendars: known_calendars,
+       calendar_colors: calendar_colors,
        selected_calendars: selected,
        selected_event: nil,
        show_filter_notice: configured_calendars(calendar_sync) == []
@@ -110,12 +111,15 @@ defmodule WhereWeAreWeb.CalendarLive do
   end
 
   defp load_month(socket, month) do
-    all_events = WhereWeAre.CalendarSync.events_for_month(socket.assigns.calendar_sync, month)
+    %{calendar_sync: calendar_sync, calendar_colors: existing_colors} = socket.assigns
+    all_events = WhereWeAre.CalendarSync.events_for_month(calendar_sync, month)
+    new_colors = derive_calendar_colors({:ok, []}, all_events)
 
     socket
     |> assign(
       displayed_month: month,
-      all_events: all_events
+      all_events: all_events,
+      calendar_colors: Map.merge(existing_colors, new_colors, fn _k, old, new -> new || old end)
     )
     |> assign_filtered_events()
   end
@@ -142,19 +146,52 @@ defmodule WhereWeAreWeb.CalendarLive do
   end
 
   defp fetch_known_calendars(calendar_sync, all_events) do
-    case WhereWeAre.CalendarSync.list_calendars(calendar_sync) do
-      {:ok, calendars} when is_list(calendars) and calendars != [] ->
-        Enum.map(calendars, &calendar_name/1)
+    calendars_result = WhereWeAre.CalendarSync.list_calendars(calendar_sync)
 
-      {:ok, _calendars} ->
-        derive_known_calendars(all_events)
+    names =
+      case calendars_result do
+        {:ok, calendars} when is_list(calendars) and calendars != [] ->
+          Enum.map(calendars, &calendar_name/1)
 
-      {:error, _reason} ->
-        configured_calendars(calendar_sync) ++ derive_known_calendars(all_events)
-    end
-    |> Enum.reject(&is_nil/1)
-    |> Enum.uniq()
-    |> Enum.sort()
+        {:ok, _calendars} ->
+          derive_known_calendars(all_events)
+
+        {:error, _reason} ->
+          configured_calendars(calendar_sync) ++ derive_known_calendars(all_events)
+      end
+      |> Enum.reject(&is_nil/1)
+      |> Enum.uniq()
+      |> Enum.sort()
+
+    colors = derive_calendar_colors(calendars_result, all_events)
+
+    {names, colors}
+  end
+
+  defp derive_calendar_colors(calendars_result, all_events) do
+    server_colors =
+      case calendars_result do
+        {:ok, calendars} when is_list(calendars) and calendars != [] ->
+          calendars
+          |> Enum.map(fn cal -> {calendar_name(cal), Map.get(cal, :color) || Map.get(cal, "color")} end)
+          |> Enum.reject(fn {name, _color} -> is_nil(name) end)
+          |> Map.new()
+
+        _ ->
+          %{}
+      end
+
+    event_colors =
+      all_events
+      |> Enum.flat_map(fn event ->
+        case {Map.get(event, :calendar_name), Map.get(event, :calendar_color)} do
+          {name, color} when is_binary(name) and not is_nil(color) -> [{name, color}]
+          _ -> []
+        end
+      end)
+      |> Map.new()
+
+    Map.merge(event_colors, server_colors, fn _name, event_color, server_color -> server_color || event_color end)
   end
 
   defp configured_calendars(calendar_sync) do

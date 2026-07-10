@@ -10,6 +10,7 @@ defmodule WhereWeAre.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       dialyzer: [plt_add_apps: [:ex_unit]],
+      listeners: [Phoenix.CodeReloader],
       deps: deps()
     ]
   end
