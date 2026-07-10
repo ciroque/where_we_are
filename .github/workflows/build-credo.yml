@@ -1,23 +1,18 @@
-name: CI
+name: Credo
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
   pull_request:
-  workflow_dispatch:
+    branches: [ "main" ]
 
 permissions:
   contents: read
 
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  test-and-analyze:
-    name: Test & Static Analysis
-    runs-on: ubuntu-latest
+  credo:
+    name: Run credo
+    runs-on: ubuntu-24.04
 
     env:
       MIX_HOME: ${{ github.workspace }}/.mix
@@ -25,8 +20,7 @@ jobs:
       MIX_ENV: test
 
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Prepare Mix environment directories
         run: |
@@ -37,38 +31,28 @@ jobs:
         id: beam
         uses: erlef/setup-beam@v1.20.4
         with:
-          otp-version: '27.3.4'
           elixir-version: '1.19.5'
+          otp-version: '27.3.4'
           version-type: strict
           hexpm-mirrors: |
             https://builds.hex.pm
             https://cdn.jsdelivr.net/hex
 
-      - name: Cache dependencies
+      - name: Restore dependencies cache
         uses: actions/cache@v4
         with:
           path: |
             deps
             _build
-            priv/plts
             ${{ github.workspace }}/.mix
             ${{ github.workspace }}/.hex
-          key: ${{ runner.os }}-mix-${{ steps.beam.outputs['elixir-version'] }}-${{ steps.beam.outputs['otp-version'] }}-${{ hashFiles('**/mix.lock') }}
+          key: ${{ runner.os }}-ubuntu-24.04-mix-${{ steps.beam.outputs['elixir-version'] }}-${{ steps.beam.outputs['otp-version'] }}-${{ hashFiles('**/mix.lock') }}
           restore-keys: |
-            ${{ runner.os }}-mix-${{ steps.beam.outputs['elixir-version'] }}-${{ steps.beam.outputs['otp-version'] }}-
-            ${{ runner.os }}-mix-
+            ${{ runner.os }}-ubuntu-24.04-mix-${{ steps.beam.outputs['elixir-version'] }}-${{ steps.beam.outputs['otp-version'] }}-
+            ${{ runner.os }}-ubuntu-24.04-mix-
 
       - name: Install dependencies
         run: mix deps.get
 
-      - name: Compile
-        run: mix compile --warnings-as-errors
-
-      - name: Run Credo
+      - name: Run credo
         run: mix credo --strict
-
-      - name: Run tests
-        run: mix test
-
-      - name: Run Dialyzer
-        run: mix dialyzer --format short

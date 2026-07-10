@@ -87,7 +87,10 @@ defmodule WhereWeAre.CalendarSync.CaldavClient do
   defp gather_events(calendar, {:ok, events}, client, caldav_client, time_range_opts) do
     case client.list_events(caldav_client, calendar.url, time_range_opts) do
       {:ok, calendar_events} ->
-        tagged = Enum.map(calendar_events, &Map.put(&1, :calendar_name, calendar.display_name))
+        tagged =
+          Enum.map(calendar_events, fn event ->
+            Map.put(event, :calendar_name, calendar.display_name)
+          end)
         {:cont, {:ok, [tagged | events]}}
 
       {:error, reason} ->
