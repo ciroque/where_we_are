@@ -10,5 +10,4 @@ data:
   PORT: {{ .Values.env.PORT | quote }}
   CALDAV_CALENDARS: {{ .Values.caldav.calendars | quote }}
   CALDAV_URL: {{ .Values.caldav.url | quote }}
-  CALDAV_USERNAME: {{ .Values.caldav.username | quote }}
   CALDAV_EVENT_WINDOW_MONTHS: {{ .Values.caldav.eventWindowMonths | quote }}
