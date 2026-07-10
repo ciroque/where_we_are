@@ -61,7 +61,7 @@ events_by_date =
                 else: "bg-white text-zinc-400 border-zinc-200 line-through"
               )
             ]}
-            style={if(selected? and Map.get(color, :bg_style), do: "#{color.bg_style}; #{color.text_style}")}
+            style={if(selected? && Map.get(color, :bg_style), do: "#{color.bg_style}; #{color.text_style}")}
           >
             {cal_name}
           </button>
