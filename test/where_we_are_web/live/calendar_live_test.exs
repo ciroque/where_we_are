@@ -73,6 +73,46 @@ defmodule WhereWeAreWeb.CalendarLiveTest do
     assert render(view) =~ "Where We Are"
   end
 
+  test "calendar list remains stable when navigating months after toggling", %{conn: conn} do
+    server_name = __MODULE__
+
+    defmodule StableCalendarClient do
+      def list_calendars(_config), do: {:ok, [%{display_name: "Work"}]}
+      def fetch_events(_config), do: {:ok, []}
+    end
+
+    event = %{
+      uid: "event-1",
+      summary: "Event One",
+      calendar_name: "Work",
+      dtstart: ~D[2024-01-15]
+    }
+
+    start_supervised!(
+      {WhereWeAre.CalendarSync,
+       name: server_name,
+       schedule?: false,
+       client: StableCalendarClient,
+       initial_events: [event]}
+    )
+
+    conn = conn |> init_test_session(%{"calendar_sync" => Atom.to_string(server_name)})
+
+    {:ok, view, _html} = live(conn, ~p"/?month=2024-01-15")
+
+    assert has_element?(view, "button", "Work")
+
+    # Deselect Work so it would previously disappear when navigating to a month
+    # with no Work events.
+    html = view |> element("button", "Work") |> render_click()
+    refute html =~ "Event One"
+
+    html = view |> element("button", "Move Next") |> render_click()
+
+    assert html =~ "February 2024"
+    assert has_element?(view, "button", "Work")
+  end
+
   test "show_event opens modal and close_event closes it", %{conn: conn} do
     today = Date.utc_today()
     server_name = __MODULE__

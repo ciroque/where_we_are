@@ -80,6 +80,19 @@ defmodule WhereWeAre.CalendarSync.CaldavClientTest do
                     }}
   end
 
+  test "list_calendars filters by configured calendars" do
+    Process.put(:test_pid, self())
+
+    config = %{
+      username: "person@example.com",
+      password: "app-specific-password",
+      client: FakeClient,
+      calendars: ["Home"]
+    }
+
+    assert {:ok, [%{display_name: "Home"}]} = CaldavClient.list_calendars(config)
+  end
+
   test "returns an error when username is missing" do
     assert {:error, :missing_caldav_username} =
              CaldavClient.fetch_events(%{

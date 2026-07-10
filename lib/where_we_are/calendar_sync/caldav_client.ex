@@ -24,8 +24,9 @@ defmodule WhereWeAre.CalendarSync.CaldavClient do
     caldav_client = caldav_client(config)
     client = client(config)
 
-    with {:ok, discovery_info} <- client.discover(caldav_client) do
-      client.list_calendars(caldav_client, discovery_info)
+    with {:ok, discovery_info} <- client.discover(caldav_client),
+         {:ok, calendars} <- client.list_calendars(caldav_client, discovery_info) do
+      {:ok, filter_calendars(calendars, config)}
     end
   end
 

@@ -11,6 +11,7 @@ defmodule WhereWeAre.CalendarSync do
     Minimal client implementation that returns no events for testing and defaults.
     """
     def fetch_events(_config), do: {:ok, []}
+    def list_calendars(_config), do: {:ok, []}
   end
 
   defstruct client: nil,

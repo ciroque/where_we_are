@@ -20,7 +20,7 @@ defmodule WhereWeAreWeb.CalendarLive do
     displayed_month = resolve_displayed_month(params, today)
     calendar_sync = resolve_calendar_sync(session)
     all_events = WhereWeAre.CalendarSync.events_for_month(calendar_sync, displayed_month)
-    known_calendars = derive_known_calendars(all_events)
+    known_calendars = fetch_known_calendars(calendar_sync, all_events)
 
     selected =
       case resolve_selected_calendars(session, known_calendars) do
@@ -106,13 +106,11 @@ defmodule WhereWeAreWeb.CalendarLive do
 
   defp load_month(socket, month) do
     all_events = WhereWeAre.CalendarSync.events_for_month(socket.assigns.calendar_sync, month)
-    known = derive_known_calendars(all_events)
 
     socket
     |> assign(
       displayed_month: month,
-      all_events: all_events,
-      known_calendars: Enum.uniq(known ++ MapSet.to_list(socket.assigns.selected_calendars)) |> Enum.sort()
+      all_events: all_events
     )
     |> assign_filtered_events()
   end
@@ -138,6 +136,21 @@ defmodule WhereWeAreWeb.CalendarLive do
     |> assign(selected_event: selected_event)
   end
 
+  defp fetch_known_calendars(calendar_sync, all_events) do
+    listed =
+      case WhereWeAre.CalendarSync.list_calendars(calendar_sync) do
+        {:ok, calendars} when is_list(calendars) -> Enum.map(calendars, &calendar_name/1)
+        _ -> []
+      end
+
+    derived = derive_known_calendars(all_events)
+
+    (listed ++ derived)
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq()
+    |> Enum.sort()
+  end
+
   defp derive_known_calendars(events) do
     events
     |> Enum.map(&Map.get(&1, :calendar_name))
@@ -145,6 +158,10 @@ defmodule WhereWeAreWeb.CalendarLive do
     |> Enum.uniq()
     |> Enum.sort()
   end
+
+  defp calendar_name(%{display_name: name}) when is_binary(name), do: name
+  defp calendar_name(%{"display_name" => name}) when is_binary(name), do: name
+  defp calendar_name(_), do: nil
 
   defp resolve_selected_calendars(%{"selected_calendars" => saved}, known_calendars)
        when is_binary(saved) and saved != "" do
