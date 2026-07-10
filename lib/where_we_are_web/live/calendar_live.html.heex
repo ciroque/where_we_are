@@ -158,7 +158,6 @@ events_by_date =
               <%= for event <- upcoming_events do %>
                 <li class="flex items-center gap-4 px-5 py-4">
                   <% local = WhereWeAreWeb.CalendarLive.to_local(event.dtstart, timezone) %>
-                  <% color = WhereWeAreWeb.PageHTML.calendar_color(Map.get(event, :calendar_name), Map.get(event, :calendar_color)) %>
                   <time
                     datetime={
                       if is_struct(local, DateTime),
@@ -190,7 +189,6 @@ events_by_date =
               <%= for event <- past_events do %>
                 <li class="flex items-center gap-4 px-5 py-4 opacity-60">
                   <% local = WhereWeAreWeb.CalendarLive.to_local(event.dtstart, timezone) %>
-                  <% color = WhereWeAreWeb.PageHTML.calendar_color(Map.get(event, :calendar_name), Map.get(event, :calendar_color)) %>
                   <time
                     datetime={
                       if is_struct(local, DateTime),
@@ -223,7 +221,6 @@ events_by_date =
      ev_local = WhereWeAreWeb.CalendarLive.to_local(Map.get(ev, :dtstart), @timezone)
      ev_end = Map.get(ev, :dtend)
      ev_end_local = if ev_end, do: WhereWeAreWeb.CalendarLive.to_local(ev_end, @timezone), else: nil
-     ev_color = WhereWeAreWeb.PageHTML.calendar_color(Map.get(ev, :calendar_name), Map.get(ev, :calendar_color))
   %>
   <div id="event-modal" class="fixed inset-0 z-50">
     <div

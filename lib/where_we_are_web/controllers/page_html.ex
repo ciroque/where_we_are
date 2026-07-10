@@ -31,31 +31,36 @@ defmodule WhereWeAreWeb.PageHTML do
   def calendar_color(calendar_name, nil), do: calendar_color(calendar_name)
 
   def calendar_color(calendar_name, hex) when is_binary(hex) do
-    rgb = normalize_hex(hex)
-    base = calendar_color(calendar_name)
+    case normalize_hex(hex) do
+      nil -> calendar_color(calendar_name)
+      rgb ->
+        base = calendar_color(calendar_name)
 
-    base
-    |> Map.put(:bg, nil)
-    |> Map.put(:text, nil)
-    |> Map.put(:bg_style, "background-color: #{rgb}")
-    |> Map.put(:text_style, "color: #{text_color_for_hex(rgb)}")
+        base
+        |> Map.put(:bg, nil)
+        |> Map.put(:text, nil)
+        |> Map.put(:bg_style, "background-color: #{rgb}")
+        |> Map.put(:text_style, "color: #{text_color_for_hex(rgb)}")
+    end
   end
+
+  @hex_chars ~r/^#[0-9a-fA-F]{6}$/
 
   defp normalize_hex("#" <> rest) when byte_size(rest) == 8 do
-    "#" <> binary_part(rest, 0, 6)
+    normalize_hex("#" <> binary_part(rest, 0, 6))
   end
 
-  defp normalize_hex(hex), do: hex
+  defp normalize_hex(hex) do
+    if Regex.match?(@hex_chars, hex), do: hex, else: nil
+  end
 
-  defp text_color_for_hex("#" <> rgb) when byte_size(rgb) == 6 do
+  defp text_color_for_hex("#" <> rgb) do
     {r, _} = Integer.parse(binary_part(rgb, 0, 2), 16)
     {g, _} = Integer.parse(binary_part(rgb, 2, 2), 16)
     {b, _} = Integer.parse(binary_part(rgb, 4, 2), 16)
     luminance = 0.2126 * r / 255 + 0.7152 * g / 255 + 0.0722 * b / 255
     if luminance > 0.4, do: "#111827", else: "#ffffff"
   end
-
-  defp text_color_for_hex(_hex), do: "#111827"
 
   embed_templates "page_html/*"
 end

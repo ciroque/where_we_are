@@ -23,6 +23,12 @@ defmodule WhereWeAreWeb.PageControllerTest do
       assert color.text_style == "color: #111827"
     end
 
+    test "falls back to Tailwind classes when hex is invalid" do
+      color = PageHTML.calendar_color("My Calendar", "red; background: evil")
+      assert is_binary(color.bg)
+      refute Map.has_key?(color, :bg_style)
+    end
+
     test "falls back to Tailwind classes when hex is nil" do
       color = PageHTML.calendar_color("My Calendar", nil)
       assert is_binary(color.bg)

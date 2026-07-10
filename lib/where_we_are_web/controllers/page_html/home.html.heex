@@ -125,7 +125,6 @@ events_by_date =
               <%= for event <- upcoming_events do %>
                 <li class="flex items-center gap-4 px-5 py-4">
                   <% local = to_local.(event.dtstart) %>
-                  <% color = WhereWeAreWeb.PageHTML.calendar_color(Map.get(event, :calendar_name)) %>
                   <time
                     datetime={
                       if is_struct(local, DateTime),
@@ -157,7 +156,6 @@ events_by_date =
               <%= for event <- past_events do %>
                 <li class="flex items-center gap-4 px-5 py-4 opacity-60">
                   <% local = to_local.(event.dtstart) %>
-                  <% color = WhereWeAreWeb.PageHTML.calendar_color(Map.get(event, :calendar_name)) %>
                   <time
                     datetime={
                       if is_struct(local, DateTime),
