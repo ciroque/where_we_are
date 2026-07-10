@@ -69,6 +69,6 @@ ENV MIX_ENV=prod
 EXPOSE 4000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD bin/where_we_are rpc "Elixir.Plug.Conn.ensure_recycled(Plug.Conn.build_conn(:head, \"/\", \"\"))" || exit 1
+    CMD bin/where_we_are ping || exit 1
 
 CMD ["bin/where_we_are", "start"]
