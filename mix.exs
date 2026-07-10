@@ -33,7 +33,7 @@ defmodule WhereWeAre.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:phoenix, "~> 1.7.21"},
+      {:phoenix, "~> 1.7"},
       {:phoenix_html, "~> 4.1"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_live_view, "~> 1.0"},
@@ -53,7 +53,6 @@ defmodule WhereWeAre.MixProject do
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 0.26"},
       {:jason, "~> 1.2"},
-      {:dns_cluster, "~> 0.1.1"},
       {:bandit, "~> 1.5"},
       {:tz, "~> 0.28"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
