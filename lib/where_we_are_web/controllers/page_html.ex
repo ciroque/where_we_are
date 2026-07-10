@@ -31,7 +31,7 @@ defmodule WhereWeAreWeb.PageHTML do
   def calendar_color(calendar_name, nil), do: calendar_color(calendar_name)
 
   def calendar_color(calendar_name, hex) when is_binary(hex) do
-    # TODO: support CalDAV-provided hex colors in the UI
+    # Hex colors from CalDAV are not yet supported in the UI.
     calendar_color(calendar_name)
   end
 
