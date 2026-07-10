@@ -15,6 +15,10 @@ defmodule WhereWeAreWeb.CalendarLive do
 
   @impl true
   def mount(params, session, socket) do
+    if connected?(socket) do
+      Phoenix.PubSub.subscribe(WhereWeAre.PubSub, WhereWeAre.CalendarSync.topic())
+    end
+
     timezone = resolve_timezone(session)
     today = DateTime.now!(timezone) |> DateTime.to_date()
     displayed_month = resolve_displayed_month(params, today)
@@ -43,6 +47,11 @@ defmodule WhereWeAreWeb.CalendarLive do
        show_filter_notice: configured_calendars(calendar_sync) == []
      )
      |> assign_filtered_events(), layout: false}
+  end
+
+  @impl true
+  def handle_info(:events_updated, socket) do
+    {:noreply, load_month(socket, socket.assigns.displayed_month)}
   end
 
   @impl true

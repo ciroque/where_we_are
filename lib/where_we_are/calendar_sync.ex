@@ -83,6 +83,10 @@ defmodule WhereWeAre.CalendarSync do
     {:reply, reply, state}
   end
 
+  def handle_call({:set_events, events}, _from, state) do
+    {:reply, :ok, %{state | events: events}}
+  end
+
   def handle_call({:events_for_month, month_start}, _from, state) do
     month_start = Date.beginning_of_month(month_start)
     month_end = Date.end_of_month(month_start)
@@ -108,6 +112,8 @@ defmodule WhereWeAre.CalendarSync do
     {:noreply, state}
   end
 
+  def topic, do: "calendar_sync"
+
   defp sync(state) do
     config =
       state.credentials
@@ -117,6 +123,7 @@ defmodule WhereWeAre.CalendarSync do
     case state.client.fetch_events(config) do
       {:ok, events} ->
         state = %{state | events: events, last_sync: DateTime.utc_now(), last_error: nil}
+        Phoenix.PubSub.broadcast(WhereWeAre.PubSub, topic(), :events_updated)
         {{:ok, events}, state}
 
       {:error, reason} ->
