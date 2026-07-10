@@ -30,9 +30,9 @@ defmodule WhereWeAreWeb.PageHTML do
 
   def calendar_color(calendar_name, nil), do: calendar_color(calendar_name)
 
-  def calendar_color(_calendar_name, hex) when is_binary(hex) do
-    rgb = String.slice(hex, 0, 7)
-    %{bg: nil, text: nil, dot: nil, hex: rgb}
+  def calendar_color(calendar_name, hex) when is_binary(hex) do
+    # TODO: support CalDAV-provided hex colors in the UI
+    calendar_color(calendar_name)
   end
 
   embed_templates "page_html/*"
