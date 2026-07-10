@@ -20,9 +20,11 @@ defmodule WhereWeAreWeb.CalendarLive do
     displayed_month = resolve_displayed_month(params, today)
     calendar_sync = resolve_calendar_sync(session)
 
-    if connected?(socket) do
-      Phoenix.PubSub.subscribe(WhereWeAre.PubSub, WhereWeAre.CalendarSync.topic(calendar_sync))
-    end
+    day_refresh_ref =
+      if connected?(socket) do
+        Phoenix.PubSub.subscribe(WhereWeAre.PubSub, WhereWeAre.CalendarSync.topic(calendar_sync))
+        schedule_day_refresh(today, timezone)
+      end
     all_events = WhereWeAre.CalendarSync.events_for_month(calendar_sync, displayed_month)
     {known_calendars, calendar_colors} = fetch_known_calendars(calendar_sync, all_events)
 
@@ -44,9 +46,19 @@ defmodule WhereWeAreWeb.CalendarLive do
        calendar_colors: calendar_colors,
        selected_calendars: selected,
        selected_event: nil,
-       show_filter_notice: configured_calendars(calendar_sync) == []
+       show_filter_notice: configured_calendars(calendar_sync) == [],
+       day_refresh_ref: day_refresh_ref
      )
      |> assign_filtered_events(), layout: false}
+  end
+
+  @impl true
+  def handle_info(:day_changed, socket) do
+    %{timezone: timezone, day_refresh_ref: old_ref} = socket.assigns
+    if old_ref, do: Process.cancel_timer(old_ref)
+    today = DateTime.now!(timezone) |> DateTime.to_date()
+    ref = schedule_day_refresh(today, timezone)
+    {:noreply, assign(socket, today: today, day_refresh_ref: ref)}
   end
 
   @impl true
@@ -305,5 +317,20 @@ defmodule WhereWeAreWeb.CalendarLive do
       %DateTime{} = dt -> dt |> DateTime.shift_zone!(timezone) |> DateTime.to_date()
       %Date{} = d -> d
     end
+  end
+
+  defp schedule_day_refresh(today, timezone) do
+    now = DateTime.now!(timezone)
+    tomorrow = Date.add(today, 1)
+
+    midnight =
+      case DateTime.new(tomorrow, ~T[00:00:00], timezone) do
+        {:ok, dt} -> dt
+        {:ambiguous, dt, _} -> dt
+        {:gap, _, dt} -> dt
+      end
+
+    ms = max(0, DateTime.diff(midnight, now, :millisecond))
+    Process.send_after(self(), :day_changed, ms)
   end
 end

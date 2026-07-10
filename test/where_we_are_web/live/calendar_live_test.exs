@@ -146,6 +146,20 @@ defmodule WhereWeAreWeb.CalendarLiveTest do
     assert has_element?(view, "button", "Work")
   end
 
+  test "updates today when :day_changed is received", %{conn: conn} do
+    today = Date.utc_today()
+
+    {:ok, view, html} = live(conn, ~p"/?month=#{Date.to_iso8601(today)}")
+
+    assert html =~ ~s(aria-current="date")
+
+    send(view.pid, :day_changed)
+
+    rendered = render(view)
+    assert rendered =~ ~s(datetime="#{Date.to_iso8601(today)}")
+    assert rendered =~ ~s(aria-current="date")
+  end
+
   test "refreshes events when :events_updated is broadcast", %{conn: conn} do
     server_name = __MODULE__
 
