@@ -113,8 +113,7 @@ defmodule WhereWeAreWeb.CalendarLive do
   defp load_month(socket, month) do
     %{calendar_sync: calendar_sync, calendar_colors: existing_colors} = socket.assigns
     all_events = WhereWeAre.CalendarSync.events_for_month(calendar_sync, month)
-    calendars_result = WhereWeAre.CalendarSync.list_calendars(calendar_sync)
-    new_colors = derive_calendar_colors(calendars_result, all_events)
+    new_colors = derive_calendar_colors({:ok, []}, all_events)
 
     socket
     |> assign(
