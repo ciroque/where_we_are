@@ -38,7 +38,8 @@ defmodule WhereWeAreWeb.CalendarLive do
        all_events: all_events,
        known_calendars: known_calendars,
        selected_calendars: selected,
-       selected_event: nil
+       selected_event: nil,
+       show_filter_notice: configured_calendars(calendar_sync) == []
      )
      |> assign_filtered_events(), layout: false}
   end
@@ -85,6 +86,10 @@ defmodule WhereWeAreWeb.CalendarLive do
 
   def handle_event("close_event", _, socket) do
     {:noreply, assign(socket, selected_event: nil)}
+  end
+
+  def handle_event("close_filter_notice", _, socket) do
+    {:noreply, assign(socket, show_filter_notice: false)}
   end
 
   def handle_event("toggle_calendar", %{"name" => name}, socket) do
@@ -137,23 +142,26 @@ defmodule WhereWeAreWeb.CalendarLive do
   end
 
   defp fetch_known_calendars(calendar_sync, all_events) do
-    {listed_ok?, listed} =
-      case WhereWeAre.CalendarSync.list_calendars(calendar_sync) do
-        {:ok, calendars} when is_list(calendars) -> {true, Enum.map(calendars, &calendar_name/1)}
-        _ -> {false, []}
-      end
+    case WhereWeAre.CalendarSync.list_calendars(calendar_sync) do
+      {:ok, calendars} when is_list(calendars) and calendars != [] ->
+        Enum.map(calendars, &calendar_name/1)
 
-    calendars =
-      if listed_ok? and listed != [] do
-        listed
-      else
-        listed ++ derive_known_calendars(all_events)
-      end
+      {:ok, _calendars} ->
+        derive_known_calendars(all_events)
 
-    calendars
+      {:error, _reason} ->
+        configured_calendars(calendar_sync) ++ derive_known_calendars(all_events)
+    end
     |> Enum.reject(&is_nil/1)
     |> Enum.uniq()
     |> Enum.sort()
+  end
+
+  defp configured_calendars(calendar_sync) do
+    case WhereWeAre.CalendarSync.state(calendar_sync) do
+      %{credentials: %{calendars: calendars}} when is_list(calendars) -> calendars
+      _ -> []
+    end
   end
 
   defp derive_known_calendars(events) do

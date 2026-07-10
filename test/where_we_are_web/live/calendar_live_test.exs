@@ -66,6 +66,39 @@ defmodule WhereWeAreWeb.CalendarLiveTest do
     assert html =~ month_label
   end
 
+  test "shows notice when no calendar filter is configured", %{conn: conn} do
+    {:ok, view, html} = live(conn, ~p"/")
+
+    assert html =~ "No calendar filter is configured"
+
+    html = view |> element("button[aria-label='Dismiss notice']") |> render_click()
+    refute html =~ "No calendar filter is configured"
+  end
+
+  test "does not show notice when a calendar filter is configured", %{conn: conn} do
+    server_name = __MODULE__
+
+    defmodule FilteredCalendarClient do
+      def list_calendars(_config), do: {:ok, [%{display_name: "Work"}]}
+      def fetch_events(_config), do: {:ok, []}
+    end
+
+    start_supervised!(
+      {WhereWeAre.CalendarSync,
+       name: server_name,
+       schedule?: false,
+       client: FilteredCalendarClient,
+       credentials: %{calendars: ["Work"]},
+       initial_events: []}
+    )
+
+    conn = conn |> init_test_session(%{"calendar_sync" => Atom.to_string(server_name)})
+
+    {:ok, _view, html} = live(conn, ~p"/")
+
+    refute html =~ "No calendar filter is configured"
+  end
+
   test "toggle_calendar filters events by calendar name", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/")
 

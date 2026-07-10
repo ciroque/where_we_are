@@ -68,6 +68,22 @@ events_by_date =
         <% end %>
       <% end %>
     </div>
+    <%= if @show_filter_notice do %>
+      <div class="mt-6 flex items-start justify-between gap-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
+        <p class="text-sm">
+          <span class="font-semibold">No calendar filter is configured.</span>
+          All CalDAV calendars are currently shown. To limit which calendars appear, configure
+          <code class="rounded bg-amber-100 px-1 py-0.5 font-mono text-amber-800">CALDAV_CALENDARS</code>.
+        </p>
+        <button
+          phx-click="close_filter_notice"
+          aria-label="Dismiss notice"
+          class="shrink-0 rounded-full p-1 text-amber-700 transition hover:bg-amber-200 cursor-pointer"
+        >
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+    <% end %>
     <div class="mt-8 grid grid-cols-7 text-center text-xs font-semibold uppercase tracking-widest text-zinc-500 sm:text-sm">
       <span>Sun</span>
       <span>Mon</span>
