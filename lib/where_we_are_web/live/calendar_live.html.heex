@@ -112,7 +112,7 @@ events_by_date =
   title={Map.get(event, :summary, "Untitled")}
 >
                   <%= if is_struct(local, DateTime) do %>
-                    <span class="font-bold opacity-75" style="font-size: 0.65rem;">{Calendar.strftime(local, "%-I:%M %p")}</span>
+                    <span class="font-bold opacity-75 text-[0.65rem]">{Calendar.strftime(local, "%-I:%M %p")}</span>
                   <% end %>
                   <span class="truncate">{Map.get(event, :summary, "Untitled")}</span>
                 </button>
