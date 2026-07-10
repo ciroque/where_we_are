@@ -11,7 +11,12 @@ defmodule WhereWeAre.CalendarSync.CaldavClientTest do
 
     def list_calendars(caldav_client, :discovery_info) do
       send(Process.get(:test_pid), {:list_calendars, caldav_client})
-      {:ok, [%{url: "https://caldav.icloud.com/calendar/", display_name: "Home"}]}
+
+      {:ok,
+       [
+         %{url: "https://caldav.icloud.com/calendar/", display_name: "Home"},
+         %{url: "https://caldav.icloud.com/work/", display_name: "Work"}
+       ]}
     end
 
     def list_events(caldav_client, "https://caldav.icloud.com/calendar/", _opts) do
@@ -46,10 +51,11 @@ defmodule WhereWeAre.CalendarSync.CaldavClientTest do
     config = %{
       username: "person@example.com",
       password: "app-specific-password",
-      client: FakeClient
+      client: FakeClient,
+      calendars: ["Home"]
     }
 
-    assert {:ok, [%{summary: "Test Event", calendar_name: _}]} =
+    assert {:ok, [%{summary: "Test Event", calendar_name: "Home"}]} =
              CaldavClient.fetch_events(config)
 
     assert_receive {:discover,
@@ -68,16 +74,43 @@ defmodule WhereWeAre.CalendarSync.CaldavClientTest do
       username: "person@example.com",
       password: "app-specific-password",
       client: FakeClient,
-      url: "https://example.com/custom"
+      url: "https://example.com/custom",
+      calendars: ["Home"]
     }
 
-    assert {:ok, [%{summary: "Test Event", calendar_name: _}]} =
+    assert {:ok, [%{summary: "Test Event", calendar_name: "Home"}]} =
              CaldavClient.fetch_events(config)
 
     assert_receive {:discover,
                     %CalDAVEx.Client{
                       config: %CalDAVEx.Config{base_url: "https://example.com/custom"}
                     }}
+  end
+
+  test "list_calendars filters by configured calendars" do
+    Process.put(:test_pid, self())
+
+    config = %{
+      username: "person@example.com",
+      password: "app-specific-password",
+      client: FakeClient,
+      calendars: ["Home"]
+    }
+
+    assert {:ok, [%{display_name: "Home"}]} = CaldavClient.list_calendars(config)
+  end
+
+  test "list_calendars returns empty list when no calendars match filter" do
+    Process.put(:test_pid, self())
+
+    config = %{
+      username: "person@example.com",
+      password: "app-specific-password",
+      client: FakeClient,
+      calendars: ["Other"]
+    }
+
+    assert {:ok, []} = CaldavClient.list_calendars(config)
   end
 
   test "returns an error when username is missing" do
