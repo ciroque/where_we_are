@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "where-we-are.fullname" . }}-config
+  labels:
+    {{- include "where-we-are.labels" . | nindent 4 }}
+data:
+  PHX_SERVER: {{ .Values.env.PHX_SERVER | quote }}
+  PHX_HOST: {{ .Values.env.PHX_HOST | quote }}
+  PORT: {{ .Values.env.PORT | quote }}
+  CALDAV_CALENDARS: {{ .Values.caldav.calendars | quote }}
+  CALDAV_URL: {{ .Values.caldav.url | quote }}
+  CALDAV_EVENT_WINDOW_MONTHS: {{ .Values.caldav.eventWindowMonths | quote }}

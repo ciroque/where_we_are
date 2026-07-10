@@ -1,0 +1,81 @@
+# This workflow will build and push a signed Docker image
+
+name: Build and sign image
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - "main"
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build_and_sign_image:
+    name: Build and sign image
+    runs-on: ubuntu-latest
+    # Only run this job if the PR was merged or if the workflow was manually triggered
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+
+    steps:
+      - name: Tell me about it
+        run: echo "I'm building ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3.3.0
+
+      - name: Log into registry ${{ env.REGISTRY }} for ${{ github.actor }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Docker Image
+        id: docker-build-and-push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{github.run_number}}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{github.sha}}
+
+      # https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable
+      - name: Sign image with a key
+        run: |
+          images="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.docker-build-and-push.outputs.digest }}"
+          cosign sign --yes --key env://COSIGN_PRIVATE_KEY ${images}
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@v0.36.0
+        continue-on-error: true
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.docker-build-and-push.outputs.digest }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          ignore-unfixed: 'true'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        continue-on-error: true
+        with:
+          sarif_file: 'trivy-results.sarif'
+          sha: ${{ github.sha }}
+          ref: ${{ github.ref }}

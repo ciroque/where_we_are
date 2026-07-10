@@ -28,5 +28,12 @@ defmodule WhereWeAreWeb.PageHTML do
     Enum.at(@calendar_colors, index)
   end
 
+  def calendar_color(calendar_name, nil), do: calendar_color(calendar_name)
+
+  def calendar_color(calendar_name, hex) when is_binary(hex) do
+    # Hex colors from CalDAV are not yet supported in the UI.
+    calendar_color(calendar_name)
+  end
+
   embed_templates "page_html/*"
 end
