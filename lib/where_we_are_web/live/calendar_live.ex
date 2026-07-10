@@ -67,9 +67,13 @@ defmodule WhereWeAreWeb.CalendarLive do
     {:noreply, push_patch(socket, to: ~p"/?today=true")}
   end
 
-  def handle_event("show_event", %{"uid" => uid}, socket) do
+  def handle_event("show_event", %{"uid" => uid}, socket) when is_binary(uid) do
     event = Enum.find(socket.assigns.events, fn e -> Map.get(e, :uid) == uid end)
     {:noreply, assign(socket, selected_event: event)}
+  end
+
+  def handle_event("show_event", _params, socket) do
+    {:noreply, socket}
   end
 
   def handle_event("close_event", _, socket) do
