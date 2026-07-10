@@ -137,15 +137,20 @@ defmodule WhereWeAreWeb.CalendarLive do
   end
 
   defp fetch_known_calendars(calendar_sync, all_events) do
-    listed =
+    {listed_ok?, listed} =
       case WhereWeAre.CalendarSync.list_calendars(calendar_sync) do
-        {:ok, calendars} when is_list(calendars) -> Enum.map(calendars, &calendar_name/1)
-        _ -> []
+        {:ok, calendars} when is_list(calendars) -> {true, Enum.map(calendars, &calendar_name/1)}
+        _ -> {false, []}
       end
 
-    derived = derive_known_calendars(all_events)
+    calendars =
+      if listed_ok? and listed != [] do
+        listed
+      else
+        listed ++ derive_known_calendars(all_events)
+      end
 
-    (listed ++ derived)
+    calendars
     |> Enum.reject(&is_nil/1)
     |> Enum.uniq()
     |> Enum.sort()
