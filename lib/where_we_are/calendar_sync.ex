@@ -83,8 +83,10 @@ defmodule WhereWeAre.CalendarSync do
     {:reply, reply, state}
   end
 
-  def handle_call({:set_events, events}, _from, state) do
-    {:reply, :ok, %{state | events: events}}
+  if Mix.env() == :test do
+    def handle_call({:set_events, events}, _from, state) when is_list(events) do
+      {:reply, :ok, %{state | events: events}}
+    end
   end
 
   def handle_call({:events_for_month, month_start}, _from, state) do
