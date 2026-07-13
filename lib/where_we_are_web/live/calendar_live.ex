@@ -338,6 +338,9 @@ defmodule WhereWeAreWeb.CalendarLive do
 
         %DateTime{} = dt ->
           dt |> DateTime.shift_zone!(timezone) |> DateTime.add(-1, :second) |> DateTime.to_date()
+
+        _other ->
+          start
       end
 
     if Date.compare(start, finish) == :gt, do: start, else: finish

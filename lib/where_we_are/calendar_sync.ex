@@ -187,6 +187,9 @@ defmodule WhereWeAre.CalendarSync do
 
       %DateTime{} = dt ->
         {:ok, dt |> DateTime.add(-1, :second) |> DateTime.to_date()}
+
+      _other ->
+        :error
     end
   end
 end

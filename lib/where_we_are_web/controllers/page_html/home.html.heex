@@ -23,48 +23,13 @@ local_date = fn
   %Date{} = d -> d
 end
 
-clamp = fn start, finish ->
-  start = if Date.compare(start, grid_start) == :lt, do: grid_start, else: start
-  finish = if Date.compare(finish, grid_end) == :gt, do: grid_end, else: finish
-
-  if Date.compare(start, finish) == :gt do
-    []
-  else
-    Date.range(start, finish) |> Enum.to_list()
-  end
-end
-
-event_dates = fn
-  %{dtend: nil} = event ->
-    start = local_date.(event.dtstart)
-    clamp.(start, start)
-
-  %{dtend: %Date{} = dtend} = event ->
-    start = local_date.(event.dtstart)
-    finish = Date.add(dtend, -1)
-    finish = if Date.compare(start, finish) == :gt, do: start, else: finish
-    clamp.(start, finish)
-
-  %{dtend: %DateTime{} = dtend} = event ->
-    start = local_date.(event.dtstart)
-
-    finish =
-      dtend
-      |> to_local.()
-      |> DateTime.add(-1, :second)
-      |> DateTime.to_date()
-
-    finish = if Date.compare(start, finish) == :gt, do: start, else: finish
-    clamp.(start, finish)
-
-  event ->
-    start = local_date.(event.dtstart)
-    clamp.(start, start)
-end
-
 events_by_date =
   @events
-  |> Enum.flat_map(fn event -> event_dates.(event) |> Enum.map(fn date -> {date, event} end) end)
+  |> Enum.flat_map(fn event ->
+    event
+    |> WhereWeAreWeb.CalendarLive.event_dates(timezone, grid_start, grid_end)
+    |> Enum.map(fn date -> {date, event} end)
+  end)
   |> Enum.group_by(fn {date, _event} -> date end, fn {_date, event} -> event end) %>
 
 <section class="relative z-10 flex flex-col items-center bg-gradient-to-br from-sky-100 via-white to-emerald-50 px-6 py-16">
