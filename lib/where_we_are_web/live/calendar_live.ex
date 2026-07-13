@@ -319,7 +319,7 @@ defmodule WhereWeAreWeb.CalendarLive do
     end
   end
 
-  def event_dates(event, timezone) do
+  def event_dates(event, timezone, grid_start \\ nil, grid_end \\ nil) do
     start = local_date(event.dtstart, timezone)
 
     finish =
@@ -334,8 +334,24 @@ defmodule WhereWeAreWeb.CalendarLive do
           dt |> DateTime.shift_zone!(timezone) |> DateTime.add(-1, :second) |> DateTime.to_date()
       end
 
+    finish = if Date.compare(start, finish) == :gt, do: start, else: finish
+
+    start =
+      if grid_start && Date.compare(start, grid_start) == :lt do
+        grid_start
+      else
+        start
+      end
+
+    finish =
+      if grid_end && Date.compare(finish, grid_end) == :gt do
+        grid_end
+      else
+        finish
+      end
+
     if Date.compare(start, finish) == :gt do
-      [start]
+      []
     else
       Date.range(start, finish) |> Enum.to_list()
     end

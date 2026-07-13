@@ -248,4 +248,57 @@ defmodule WhereWeAreWeb.CalendarLiveTest do
 
     refute html =~ "A test event description"
   end
+
+  describe "event_dates/2" do
+    test "returns a single day for an event with no dtend" do
+      event = %{dtstart: ~D[2024-01-15]}
+
+      assert [~D[2024-01-15]] =
+               WhereWeAreWeb.CalendarLive.event_dates(event, "Etc/UTC")
+    end
+
+    test "expands a multi-day event across every day it spans" do
+      event = %{dtstart: ~D[2024-01-15], dtend: ~D[2024-01-18]}
+
+      assert [
+               ~D[2024-01-15],
+               ~D[2024-01-16],
+               ~D[2024-01-17]
+             ] = WhereWeAreWeb.CalendarLive.event_dates(event, "Etc/UTC")
+    end
+
+    test "treats Date dtend as exclusive" do
+      event = %{dtstart: ~D[2024-01-15], dtend: ~D[2024-01-16]}
+
+      assert [~D[2024-01-15]] = WhereWeAreWeb.CalendarLive.event_dates(event, "Etc/UTC")
+    end
+
+    test "treats DateTime dtend as exclusive" do
+      event = %{
+        dtstart: DateTime.new!(~D[2024-01-15], ~T[10:00:00], "Etc/UTC"),
+        dtend: DateTime.new!(~D[2024-01-16], ~T[00:00:00], "Etc/UTC")
+      }
+
+      assert [~D[2024-01-15]] = WhereWeAreWeb.CalendarLive.event_dates(event, "Etc/UTC")
+    end
+
+    test "falls back to the start day when dtend is earlier than dtstart" do
+      event = %{dtstart: ~D[2024-01-15], dtend: ~D[2024-01-15]}
+
+      assert [~D[2024-01-15]] = WhereWeAreWeb.CalendarLive.event_dates(event, "Etc/UTC")
+    end
+
+    test "expands DateTime events across multiple days in the target timezone" do
+      event = %{
+        dtstart: DateTime.new!(~D[2024-01-15], ~T[10:00:00], "Etc/UTC"),
+        dtend: DateTime.new!(~D[2024-01-17], ~T[10:00:00], "Etc/UTC")
+      }
+
+      assert [
+               ~D[2024-01-15],
+               ~D[2024-01-16],
+               ~D[2024-01-17]
+             ] = WhereWeAreWeb.CalendarLive.event_dates(event, "Etc/UTC")
+    end
+  end
 end

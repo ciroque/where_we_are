@@ -155,6 +155,9 @@ defmodule WhereWeAre.CalendarSync do
   defp event_in_range?(event, month_start, month_end) do
     case {event_date(event), event_end_date(event)} do
       {{:ok, start_date}, {:ok, end_date}} ->
+        end_date =
+          if Date.compare(end_date, start_date) == :lt, do: start_date, else: end_date
+
         Date.compare(start_date, month_end) in [:eq, :lt] and
           Date.compare(end_date, month_start) in [:eq, :gt]
 

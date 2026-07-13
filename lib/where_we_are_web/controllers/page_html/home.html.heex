@@ -27,7 +27,10 @@ event_dates = fn
     [local_date.(event.dtstart)]
 
   %{dtend: %Date{} = dtend} = event ->
-    Date.range(local_date.(event.dtstart), Date.add(dtend, -1)) |> Enum.to_list()
+    start = local_date.(event.dtstart)
+    finish = Date.add(dtend, -1)
+
+    if Date.compare(start, finish) == :gt, do: [start], else: Date.range(start, finish) |> Enum.to_list()
 
   %{dtend: %DateTime{} = dtend} = event ->
     start = local_date.(event.dtstart)

@@ -6,13 +6,14 @@ first_of_month = Date.beginning_of_month(displayed_month)
 month_label = Calendar.strftime(first_of_month, "%B %Y")
 sunday_offset = rem(Date.day_of_week(first_of_month), 7)
 grid_start = Date.add(first_of_month, -sunday_offset)
+grid_end = Date.add(grid_start, 41)
 calendar_cells = Enum.map(0..41, fn offset -> Date.add(grid_start, offset) end)
 
 events_by_date =
   @events
   |> Enum.flat_map(fn event ->
     event
-    |> WhereWeAreWeb.CalendarLive.event_dates(timezone)
+    |> WhereWeAreWeb.CalendarLive.event_dates(timezone, grid_start, grid_end)
     |> Enum.map(fn date -> {date, event} end)
   end)
   |> Enum.group_by(fn {date, _event} -> date end, fn {_date, event} -> event end) %>
