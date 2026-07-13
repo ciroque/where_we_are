@@ -319,6 +319,28 @@ defmodule WhereWeAreWeb.CalendarLive do
     end
   end
 
+  def event_dates(event, timezone) do
+    start = local_date(event.dtstart, timezone)
+
+    finish =
+      case Map.get(event, :dtend) do
+        nil ->
+          start
+
+        %Date{} = date ->
+          Date.add(date, -1)
+
+        %DateTime{} = dt ->
+          dt |> DateTime.shift_zone!(timezone) |> DateTime.add(-1, :second) |> DateTime.to_date()
+      end
+
+    if Date.compare(start, finish) == :gt do
+      [start]
+    else
+      Date.range(start, finish) |> Enum.to_list()
+    end
+  end
+
   defp schedule_day_refresh(today, timezone) do
     now = DateTime.now!(timezone)
     tomorrow = Date.add(today, 1)

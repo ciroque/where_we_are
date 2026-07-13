@@ -153,10 +153,10 @@ defmodule WhereWeAre.CalendarSync do
   end
 
   defp event_in_range?(event, month_start, month_end) do
-    case event_date(event) do
-      {:ok, date} ->
-        Date.compare(date, month_start) in [:eq, :gt] and
-          Date.compare(date, month_end) in [:eq, :lt]
+    case {event_date(event), event_end_date(event)} do
+      {{:ok, start_date}, {:ok, end_date}} ->
+        Date.compare(start_date, month_end) in [:eq, :lt] and
+          Date.compare(end_date, month_start) in [:eq, :gt]
 
       _ ->
         false
@@ -173,4 +173,17 @@ defmodule WhereWeAre.CalendarSync do
   defp event_date(%{dtstart: %DateTime{} = dt}), do: {:ok, DateTime.to_date(dt)}
   defp event_date(%{dtstart: %Date{} = date}), do: {:ok, date}
   defp event_date(_event), do: :error
+
+  defp event_end_date(event) do
+    case Map.get(event, :dtend) do
+      nil ->
+        event_date(event)
+
+      %Date{} = date ->
+        {:ok, Date.add(date, -1)}
+
+      %DateTime{} = dt ->
+        {:ok, dt |> DateTime.add(-1, :second) |> DateTime.to_date()}
+    end
+  end
 end

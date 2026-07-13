@@ -22,8 +22,32 @@ local_date = fn
   %Date{} = d -> d
 end
 
+event_dates = fn
+  %{dtend: nil} = event ->
+    [local_date.(event.dtstart)]
+
+  %{dtend: %Date{} = dtend} = event ->
+    Date.range(local_date.(event.dtstart), Date.add(dtend, -1)) |> Enum.to_list()
+
+  %{dtend: %DateTime{} = dtend} = event ->
+    start = local_date.(event.dtstart)
+
+    finish =
+      dtend
+      |> to_local.()
+      |> DateTime.add(-1, :second)
+      |> DateTime.to_date()
+
+    if Date.compare(start, finish) == :gt, do: [start], else: Date.range(start, finish) |> Enum.to_list()
+
+  event ->
+    [local_date.(event.dtstart)]
+end
+
 events_by_date =
-  Enum.group_by(@events, fn event -> local_date.(event.dtstart) end) %>
+  @events
+  |> Enum.flat_map(fn event -> event_dates.(event) |> Enum.map(fn date -> {date, event} end) end)
+  |> Enum.group_by(fn {date, _event} -> date end, fn {_date, event} -> event end) %>
 
 <section class="relative z-10 flex flex-col items-center bg-gradient-to-br from-sky-100 via-white to-emerald-50 px-6 py-16">
   <div class="w-full max-w-5xl rounded-3xl bg-white/80 p-8 shadow-xl ring-1 ring-sky-100 backdrop-blur">

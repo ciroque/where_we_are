@@ -9,9 +9,13 @@ grid_start = Date.add(first_of_month, -sunday_offset)
 calendar_cells = Enum.map(0..41, fn offset -> Date.add(grid_start, offset) end)
 
 events_by_date =
-  Enum.group_by(@events, fn event ->
-    WhereWeAreWeb.CalendarLive.local_date(event.dtstart, timezone)
-  end) %>
+  @events
+  |> Enum.flat_map(fn event ->
+    event
+    |> WhereWeAreWeb.CalendarLive.event_dates(timezone)
+    |> Enum.map(fn date -> {date, event} end)
+  end)
+  |> Enum.group_by(fn {date, _event} -> date end, fn {_date, event} -> event end) %>
 
 <section class="relative z-10 flex flex-col items-center bg-gradient-to-br from-sky-100 via-white to-emerald-50 px-6 py-16">
   <div class="w-full max-w-5xl rounded-3xl bg-white/80 p-8 shadow-xl ring-1 ring-sky-100 backdrop-blur">
