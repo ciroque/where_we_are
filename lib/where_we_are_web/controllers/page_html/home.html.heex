@@ -6,6 +6,7 @@ first_of_month = Date.beginning_of_month(displayed_month)
 month_label = Calendar.strftime(first_of_month, "%B %Y")
 sunday_offset = rem(Date.day_of_week(first_of_month), 7)
 grid_start = Date.add(first_of_month, -sunday_offset)
+grid_end = Date.add(grid_start, 41)
 calendar_cells = Enum.map(0..41, fn offset -> Date.add(grid_start, offset) end)
 prev_month = Date.add(first_of_month, -1) |> Date.beginning_of_month()
 
@@ -22,15 +23,26 @@ local_date = fn
   %Date{} = d -> d
 end
 
+clamp = fn start, finish ->
+  start = if Date.compare(start, grid_start) == :lt, do: grid_start, else: start
+  finish = if Date.compare(finish, grid_end) == :gt, do: grid_end, else: finish
+
+  if Date.compare(start, finish) == :gt do
+    []
+  else
+    Date.range(start, finish) |> Enum.to_list()
+  end
+end
+
 event_dates = fn
   %{dtend: nil} = event ->
-    [local_date.(event.dtstart)]
+    start = local_date.(event.dtstart)
+    clamp.(start, start)
 
   %{dtend: %Date{} = dtend} = event ->
     start = local_date.(event.dtstart)
     finish = Date.add(dtend, -1)
-
-    if Date.compare(start, finish) == :gt, do: [start], else: Date.range(start, finish) |> Enum.to_list()
+    clamp.(start, finish)
 
   %{dtend: %DateTime{} = dtend} = event ->
     start = local_date.(event.dtstart)
@@ -41,10 +53,11 @@ event_dates = fn
       |> DateTime.add(-1, :second)
       |> DateTime.to_date()
 
-    if Date.compare(start, finish) == :gt, do: [start], else: Date.range(start, finish) |> Enum.to_list()
+    clamp.(start, finish)
 
   event ->
-    [local_date.(event.dtstart)]
+    start = local_date.(event.dtstart)
+    clamp.(start, start)
 end
 
 events_by_date =

@@ -321,7 +321,13 @@ defmodule WhereWeAreWeb.CalendarLive do
 
   def event_dates(event, timezone, grid_start \\ nil, grid_end \\ nil) do
     start = local_date(event.dtstart, timezone)
+    finish = event_finish_date(event, timezone, start)
+    start = clamp_date(start, grid_start, :min)
+    finish = clamp_date(finish, grid_end, :max)
+    date_range(start, finish)
+  end
 
+  defp event_finish_date(event, timezone, start) do
     finish =
       case Map.get(event, :dtend) do
         nil ->
@@ -334,27 +340,21 @@ defmodule WhereWeAreWeb.CalendarLive do
           dt |> DateTime.shift_zone!(timezone) |> DateTime.add(-1, :second) |> DateTime.to_date()
       end
 
-    finish = if Date.compare(start, finish) == :gt, do: start, else: finish
+    if Date.compare(start, finish) == :gt, do: start, else: finish
+  end
 
-    start =
-      if grid_start && Date.compare(start, grid_start) == :lt do
-        grid_start
-      else
-        start
-      end
+  defp clamp_date(date, nil, _direction), do: date
 
-    finish =
-      if grid_end && Date.compare(finish, grid_end) == :gt do
-        grid_end
-      else
-        finish
-      end
+  defp clamp_date(date, bound, :min) do
+    if Date.compare(date, bound) == :lt, do: bound, else: date
+  end
 
-    if Date.compare(start, finish) == :gt do
-      []
-    else
-      Date.range(start, finish) |> Enum.to_list()
-    end
+  defp clamp_date(date, bound, :max) do
+    if Date.compare(date, bound) == :gt, do: bound, else: date
+  end
+
+  defp date_range(start, finish) do
+    if Date.compare(start, finish) == :gt, do: [], else: Date.range(start, finish) |> Enum.to_list()
   end
 
   defp schedule_day_refresh(today, timezone) do
