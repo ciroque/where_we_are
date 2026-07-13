@@ -42,6 +42,7 @@ event_dates = fn
   %{dtend: %Date{} = dtend} = event ->
     start = local_date.(event.dtstart)
     finish = Date.add(dtend, -1)
+    finish = if Date.compare(start, finish) == :gt, do: start, else: finish
     clamp.(start, finish)
 
   %{dtend: %DateTime{} = dtend} = event ->
@@ -53,6 +54,7 @@ event_dates = fn
       |> DateTime.add(-1, :second)
       |> DateTime.to_date()
 
+    finish = if Date.compare(start, finish) == :gt, do: start, else: finish
     clamp.(start, finish)
 
   event ->
