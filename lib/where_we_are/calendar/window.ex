@@ -15,35 +15,44 @@ defmodule WhereWeAre.Calendar.Window do
   """
   def end_date(event, timezone \\ "Etc/UTC") do
     start = local_date(event_start(event), timezone)
+
+    if is_nil(start) do
+      raise ArgumentError, "calendar event is missing or has an invalid :dtstart"
+    end
+
     finish = finish_date(event, timezone, start)
     if Date.compare(start, finish) == :gt, do: start, else: finish
   end
 
   @doc """
-  True when the event overlaps the inclusive `[range_start, range_end]` date range.
+  True when the event overlaps the inclusive `[range_start, range_end]` date range
+  in `timezone`.
+
+  `%DateTime{}` boundaries are shifted into `timezone` before comparison so month
+  filtering matches the viewer's local calendar day (not the event's source zone).
   """
-  def overlaps_range?(event, range_start, range_end) do
-    case {start_date(event), exclusive_end_as_inclusive(event)} do
-      {{:ok, start_date}, {:ok, end_date}} ->
-        end_date = if Date.compare(end_date, start_date) == :lt, do: start_date, else: end_date
+  def overlaps_range?(event, range_start, range_end, timezone \\ "Etc/UTC") do
+    case local_date(event_start(event), timezone) do
+      nil ->
+        false
+
+      start_date ->
+        end_date = end_date(event, timezone)
 
         Date.compare(start_date, range_end) in [:eq, :lt] and
           Date.compare(end_date, range_start) in [:eq, :gt]
-
-      _ ->
-        false
     end
   end
 
   @doc """
-  Events whose range overlaps the calendar month of `month_start`.
+  Events whose local range overlaps the calendar month of `month_start` in `timezone`.
   """
-  def events_for_month(events, month_start) when is_list(events) do
+  def events_for_month(events, month_start, timezone \\ "Etc/UTC") when is_list(events) do
     month_start = Date.beginning_of_month(month_start)
     month_end = Date.end_of_month(month_start)
 
     events
-    |> Enum.filter(&overlaps_range?(&1, month_start, month_end))
+    |> Enum.filter(&overlaps_range?(&1, month_start, month_end, timezone))
     |> Enum.sort_by(&sort_key/1, fn left, right -> DateTime.compare(left, right) != :gt end)
   end
 
@@ -52,7 +61,13 @@ defmodule WhereWeAre.Calendar.Window do
   """
   def days_in_range(event, timezone, grid_start \\ nil, grid_end \\ nil) do
     start = local_date(event_start(event), timezone)
-    finish = end_date(event, timezone)
+
+    if is_nil(start) do
+      raise ArgumentError, "calendar event is missing or has an invalid :dtstart"
+    end
+
+    finish = finish_date(event, timezone, start)
+    finish = if Date.compare(start, finish) == :gt, do: start, else: finish
     start = clamp_date(start, grid_start, :min)
     finish = clamp_date(finish, grid_end, :max)
     date_range(start, finish)
@@ -97,27 +112,6 @@ defmodule WhereWeAre.Calendar.Window do
 
   defp event_start(%{dtstart: dtstart}), do: dtstart
   defp event_start(_event), do: nil
-
-  defp start_date(%{dtstart: %DateTime{} = dt}), do: {:ok, DateTime.to_date(dt)}
-  defp start_date(%{dtstart: %Date{} = date}), do: {:ok, date}
-  defp start_date(_event), do: :error
-
-  # UTC date form used for month filtering (matches historical CalendarSync behavior).
-  defp exclusive_end_as_inclusive(event) do
-    case Map.get(event, :dtend) do
-      nil ->
-        start_date(event)
-
-      %Date{} = date ->
-        {:ok, Date.add(date, -1)}
-
-      %DateTime{} = dt ->
-        {:ok, dt |> DateTime.add(-1, :second) |> DateTime.to_date()}
-
-      _other ->
-        :error
-    end
-  end
 
   defp finish_date(event, timezone, start) do
     case Map.get(event, :dtend) do

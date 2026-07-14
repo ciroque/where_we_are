@@ -8,7 +8,11 @@ defmodule WhereWeAreWeb.PageController do
 
     events =
       conn.assigns[:events] ||
-        WhereWeAre.CalendarSync.events_for_month(displayed_month)
+        WhereWeAre.CalendarSync.events_for_month(
+          WhereWeAre.CalendarSync,
+          displayed_month,
+          timezone
+        )
 
     render(conn, :home,
       layout: false,

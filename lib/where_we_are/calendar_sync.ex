@@ -4,6 +4,8 @@ defmodule WhereWeAre.CalendarSync do
   """
   use GenServer
 
+  alias WhereWeAre.Calendar.Window
+
   @default_poll_interval :timer.minutes(10)
 
   defmodule NoopClient do
@@ -48,11 +50,15 @@ defmodule WhereWeAre.CalendarSync do
   end
 
   def events_for_month(month_start) do
-    events_for_month(__MODULE__, month_start)
+    events_for_month(__MODULE__, month_start, "Etc/UTC")
   end
 
   def events_for_month(server, month_start) do
-    GenServer.call(server, {:events_for_month, month_start})
+    events_for_month(server, month_start, "Etc/UTC")
+  end
+
+  def events_for_month(server, month_start, timezone) when is_binary(timezone) do
+    GenServer.call(server, {:events_for_month, month_start, timezone})
   end
 
   @impl true
@@ -96,8 +102,8 @@ defmodule WhereWeAre.CalendarSync do
     end
   end
 
-  def handle_call({:events_for_month, month_start}, _from, state) do
-    events = WhereWeAre.Calendar.Window.events_for_month(state.events, month_start)
+  def handle_call({:events_for_month, month_start, timezone}, _from, state) do
+    events = Window.events_for_month(state.events, month_start, timezone)
     {:reply, events, state}
   end
 

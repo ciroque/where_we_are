@@ -71,6 +71,11 @@ defmodule WhereWeAre.Calendar.WindowTest do
              ] = Window.days_in_range(event, "Etc/UTC")
     end
 
+    test "falls back to start when computed end is earlier than start" do
+      event = %{dtstart: ~D[2024-01-15], dtend: ~D[2024-01-15]}
+      assert [~D[2024-01-15]] = Window.days_in_range(event, "Etc/UTC")
+    end
+
     test "clamps days to the provided grid window" do
       event = %{dtstart: ~D[2024-01-01], dtend: ~D[2024-01-10]}
 
@@ -79,7 +84,7 @@ defmodule WhereWeAre.Calendar.WindowTest do
     end
   end
 
-  describe "overlaps_range?/3 and events_for_month/2" do
+  describe "overlaps_range?/4 and events_for_month/3" do
     test "returns events starting within the month when dtstart is a DateTime" do
       events = [
         %{id: "jan-early", dtstart: DateTime.new!(~D[2024-01-05], ~T[09:00:00], "Etc/UTC")},
@@ -89,6 +94,23 @@ defmodule WhereWeAre.Calendar.WindowTest do
 
       assert [%{id: "jan-early"}, %{id: "jan-late"}] =
                Window.events_for_month(events, ~D[2024-01-01])
+    end
+
+    test "filters DateTime events using the viewer timezone near month boundaries" do
+      # 2024-02-01 02:00 UTC == 2024-01-31 19:00 America/Denver
+      events = [
+        %{id: "local-jan", dtstart: DateTime.new!(~D[2024-02-01], ~T[02:00:00], "Etc/UTC")}
+      ]
+
+      assert [%{id: "local-jan"}] =
+               Window.events_for_month(events, ~D[2024-01-01], "America/Denver")
+
+      assert [] = Window.events_for_month(events, ~D[2024-01-01], "Etc/UTC")
+
+      assert [] = Window.events_for_month(events, ~D[2024-02-01], "America/Denver")
+
+      assert [%{id: "local-jan"}] =
+               Window.events_for_month(events, ~D[2024-02-01], "Etc/UTC")
     end
 
     test "filters by both month and year" do
