@@ -34,6 +34,8 @@ defmodule WhereWeAreWeb.CalendarLive do
         names -> MapSet.new(names)
       end
 
+    last_error = sync_last_error(calendar_sync)
+
     {:ok,
      socket
      |> assign(
@@ -47,6 +49,8 @@ defmodule WhereWeAreWeb.CalendarLive do
        selected_calendars: selected,
        selected_event: nil,
        show_filter_notice: configured_calendars(calendar_sync) == [],
+       last_error: last_error,
+       show_sync_error: last_error != nil,
        day_refresh_ref: day_refresh_ref
      )
      |> assign_filtered_events(), layout: false}
@@ -77,13 +81,17 @@ defmodule WhereWeAreWeb.CalendarLive do
     new_calendars = Enum.reject(known_calendars, &MapSet.member?(prev_known_set, &1))
     selected = MapSet.union(selected, MapSet.new(new_calendars))
 
+    last_error = sync_last_error(calendar_sync)
+
     {:noreply,
      socket
      |> assign(
        all_events: all_events,
        known_calendars: known_calendars,
        calendar_colors: calendar_colors,
-       selected_calendars: selected
+       selected_calendars: selected,
+       last_error: last_error,
+       show_sync_error: last_error != nil
      )
      |> assign_filtered_events()}
   end
@@ -134,6 +142,10 @@ defmodule WhereWeAreWeb.CalendarLive do
 
   def handle_event("close_filter_notice", _, socket) do
     {:noreply, assign(socket, show_filter_notice: false)}
+  end
+
+  def handle_event("close_sync_error", _, socket) do
+    {:noreply, assign(socket, show_sync_error: false)}
   end
 
   def handle_event("toggle_calendar", %{"name" => name}, socket) do
@@ -239,6 +251,13 @@ defmodule WhereWeAreWeb.CalendarLive do
 
   defp configured_calendars(calendar_sync) do
     WhereWeAre.CalendarSync.configured_calendars(calendar_sync)
+  end
+
+  defp sync_last_error(calendar_sync) do
+    case WhereWeAre.CalendarSync.state(calendar_sync) do
+      %{last_error: error} -> error
+      _ -> nil
+    end
   end
 
   defp derive_known_calendars(events) do

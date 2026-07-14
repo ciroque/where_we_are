@@ -55,6 +55,8 @@ defmodule WhereWeAreWeb do
       use Phoenix.LiveView,
         layout: {WhereWeAreWeb.Layouts, :app}
 
+      import WhereWeAreWeb.CalendarComponents
+
       unquote(html_helpers())
     end
   end
