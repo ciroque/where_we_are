@@ -146,5 +146,67 @@ defmodule WhereWeAre.CalendarSyncTest do
       assert [%{id: "with-date"}] = CalendarSync.events_for_month(pid, january)
       assert [] = CalendarSync.events_for_month(pid, ~D[2024-02-01])
     end
+
+    test "includes multi-day events overlapping the month" do
+      {:ok, pid} =
+        start_supervised(
+          {CalendarSync,
+           name: :calendar_sync_events_month_overlap_test,
+           schedule?: false,
+           initial_events: [
+             %{id: "starts-before-ends-inside", dtstart: ~D[2023-12-28], dtend: ~D[2024-01-03]},
+             %{id: "starts-inside-ends-after", dtstart: ~D[2024-01-28], dtend: ~D[2024-02-03]},
+             %{id: "spans-month", dtstart: ~D[2023-12-15], dtend: ~D[2024-02-15]},
+             %{id: "before", dtstart: ~D[2023-12-01], dtend: ~D[2023-12-02]},
+             %{id: "after", dtstart: ~D[2024-02-01], dtend: ~D[2024-02-02]}
+           ]}
+        )
+
+      assert [
+               %{id: "spans-month"},
+               %{id: "starts-before-ends-inside"},
+               %{id: "starts-inside-ends-after"}
+             ] = CalendarSync.events_for_month(pid, ~D[2024-01-01])
+    end
+
+    test "handles exclusive dtend with Date values" do
+      {:ok, pid} =
+        start_supervised(
+          {CalendarSync,
+           name: :calendar_sync_events_date_dtend_test,
+           schedule?: false,
+           initial_events: [
+             %{id: "last-day", dtstart: ~D[2024-01-31], dtend: ~D[2024-02-01]},
+             %{id: "exclusive-starts-feb", dtstart: ~D[2024-02-01], dtend: ~D[2024-02-02]}
+           ]}
+        )
+
+      assert [%{id: "last-day"}] = CalendarSync.events_for_month(pid, ~D[2024-01-01])
+      assert [%{id: "exclusive-starts-feb"}] = CalendarSync.events_for_month(pid, ~D[2024-02-01])
+    end
+
+    test "handles exclusive dtend with DateTime values" do
+      {:ok, pid} =
+        start_supervised(
+          {CalendarSync,
+           name: :calendar_sync_events_datetime_dtend_test,
+           schedule?: false,
+           initial_events: [
+             %{
+               id: "last-day",
+               dtstart: DateTime.new!(~D[2024-01-31], ~T[23:00:00], "Etc/UTC"),
+               dtend: DateTime.new!(~D[2024-02-01], ~T[00:00:00], "Etc/UTC")
+             },
+             %{
+               id: "exclusive-starts-feb",
+               dtstart: DateTime.new!(~D[2024-02-01], ~T[00:00:00], "Etc/UTC"),
+               dtend: DateTime.new!(~D[2024-02-02], ~T[00:00:00], "Etc/UTC")
+             }
+           ]}
+        )
+
+      assert [%{id: "last-day"}] = CalendarSync.events_for_month(pid, ~D[2024-01-01])
+      assert [%{id: "exclusive-starts-feb"}] = CalendarSync.events_for_month(pid, ~D[2024-02-01])
+    end
   end
 end

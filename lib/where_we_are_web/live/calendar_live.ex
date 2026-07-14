@@ -304,21 +304,6 @@ defmodule WhereWeAreWeb.CalendarLive do
     end
   end
 
-  # Template helpers used from the HEEx template
-  def to_local(dtstart, timezone) do
-    case dtstart do
-      %DateTime{} = dt -> DateTime.shift_zone!(dt, timezone)
-      other -> other
-    end
-  end
-
-  def local_date(dtstart, timezone) do
-    case dtstart do
-      %DateTime{} = dt -> dt |> DateTime.shift_zone!(timezone) |> DateTime.to_date()
-      %Date{} = d -> d
-    end
-  end
-
   defp schedule_day_refresh(today, timezone) do
     now = DateTime.now!(timezone)
     tomorrow = Date.add(today, 1)
