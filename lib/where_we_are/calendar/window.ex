@@ -62,7 +62,8 @@ defmodule WhereWeAre.Calendar.Window do
       raise ArgumentError, "calendar event is missing or has an invalid :dtstart"
     end
 
-    finish = end_date(event, timezone)
+    finish = finish_date(event, timezone, start)
+    finish = if Date.compare(start, finish) == :gt, do: start, else: finish
     start = clamp_date(start, grid_start, :min)
     finish = clamp_date(finish, grid_end, :max)
     date_range(start, finish)
