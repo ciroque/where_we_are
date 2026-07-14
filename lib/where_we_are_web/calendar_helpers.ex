@@ -14,7 +14,7 @@ defmodule WhereWeAreWeb.CalendarHelpers do
 
   def event_dates(event, timezone, grid_start \\ nil, grid_end \\ nil) do
     start = local_date(event.dtstart, timezone)
-    finish = event_end_date(event, timezone)
+    finish = event_finish_date(event, timezone, start)
     start = clamp_date(start, grid_start, :min)
     finish = clamp_date(finish, grid_end, :max)
     date_range(start, finish)

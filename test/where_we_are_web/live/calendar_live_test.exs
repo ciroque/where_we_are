@@ -282,7 +282,7 @@ defmodule WhereWeAreWeb.CalendarLiveTest do
       assert [~D[2024-01-15]] = WhereWeAreWeb.CalendarHelpers.event_dates(event, "Etc/UTC")
     end
 
-    test "falls back to the start day when dtend is earlier than dtstart" do
+    test "falls back to the start day when the computed end date is earlier than the start date" do
       event = %{dtstart: ~D[2024-01-15], dtend: ~D[2024-01-15]}
 
       assert [~D[2024-01-15]] = WhereWeAreWeb.CalendarHelpers.event_dates(event, "Etc/UTC")
