@@ -304,62 +304,6 @@ defmodule WhereWeAreWeb.CalendarLive do
     end
   end
 
-  # Template helpers used from the HEEx template
-  def to_local(dtstart, timezone) do
-    case dtstart do
-      %DateTime{} = dt -> DateTime.shift_zone!(dt, timezone)
-      other -> other
-    end
-  end
-
-  def local_date(dtstart, timezone) do
-    case dtstart do
-      %DateTime{} = dt -> dt |> DateTime.shift_zone!(timezone) |> DateTime.to_date()
-      %Date{} = d -> d
-    end
-  end
-
-  def event_dates(event, timezone, grid_start \\ nil, grid_end \\ nil) do
-    start = local_date(event.dtstart, timezone)
-    finish = event_finish_date(event, timezone, start)
-    start = clamp_date(start, grid_start, :min)
-    finish = clamp_date(finish, grid_end, :max)
-    date_range(start, finish)
-  end
-
-  defp event_finish_date(event, timezone, start) do
-    finish =
-      case Map.get(event, :dtend) do
-        nil ->
-          start
-
-        %Date{} = date ->
-          Date.add(date, -1)
-
-        %DateTime{} = dt ->
-          dt |> DateTime.shift_zone!(timezone) |> DateTime.add(-1, :second) |> DateTime.to_date()
-
-        _other ->
-          start
-      end
-
-    if Date.compare(start, finish) == :gt, do: start, else: finish
-  end
-
-  defp clamp_date(date, nil, _direction), do: date
-
-  defp clamp_date(date, bound, :min) do
-    if Date.compare(date, bound) == :lt, do: bound, else: date
-  end
-
-  defp clamp_date(date, bound, :max) do
-    if Date.compare(date, bound) == :gt, do: bound, else: date
-  end
-
-  defp date_range(start, finish) do
-    if Date.compare(start, finish) == :gt, do: [], else: Date.range(start, finish) |> Enum.to_list()
-  end
-
   defp schedule_day_refresh(today, timezone) do
     now = DateTime.now!(timezone)
     tomorrow = Date.add(today, 1)

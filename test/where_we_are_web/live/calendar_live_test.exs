@@ -254,7 +254,7 @@ defmodule WhereWeAreWeb.CalendarLiveTest do
       event = %{dtstart: ~D[2024-01-15]}
 
       assert [~D[2024-01-15]] =
-               WhereWeAreWeb.CalendarLive.event_dates(event, "Etc/UTC")
+               WhereWeAreWeb.CalendarHelpers.event_dates(event, "Etc/UTC")
     end
 
     test "expands a multi-day event across every day it spans" do
@@ -264,13 +264,13 @@ defmodule WhereWeAreWeb.CalendarLiveTest do
                ~D[2024-01-15],
                ~D[2024-01-16],
                ~D[2024-01-17]
-             ] = WhereWeAreWeb.CalendarLive.event_dates(event, "Etc/UTC")
+             ] = WhereWeAreWeb.CalendarHelpers.event_dates(event, "Etc/UTC")
     end
 
     test "treats Date dtend as exclusive" do
       event = %{dtstart: ~D[2024-01-15], dtend: ~D[2024-01-16]}
 
-      assert [~D[2024-01-15]] = WhereWeAreWeb.CalendarLive.event_dates(event, "Etc/UTC")
+      assert [~D[2024-01-15]] = WhereWeAreWeb.CalendarHelpers.event_dates(event, "Etc/UTC")
     end
 
     test "treats DateTime dtend as exclusive" do
@@ -279,13 +279,13 @@ defmodule WhereWeAreWeb.CalendarLiveTest do
         dtend: DateTime.new!(~D[2024-01-16], ~T[00:00:00], "Etc/UTC")
       }
 
-      assert [~D[2024-01-15]] = WhereWeAreWeb.CalendarLive.event_dates(event, "Etc/UTC")
+      assert [~D[2024-01-15]] = WhereWeAreWeb.CalendarHelpers.event_dates(event, "Etc/UTC")
     end
 
     test "falls back to the start day when dtend is earlier than dtstart" do
       event = %{dtstart: ~D[2024-01-15], dtend: ~D[2024-01-15]}
 
-      assert [~D[2024-01-15]] = WhereWeAreWeb.CalendarLive.event_dates(event, "Etc/UTC")
+      assert [~D[2024-01-15]] = WhereWeAreWeb.CalendarHelpers.event_dates(event, "Etc/UTC")
     end
 
     test "expands DateTime events across multiple days in the target timezone" do
@@ -298,7 +298,7 @@ defmodule WhereWeAreWeb.CalendarLiveTest do
                ~D[2024-01-15],
                ~D[2024-01-16],
                ~D[2024-01-17]
-             ] = WhereWeAreWeb.CalendarLive.event_dates(event, "Etc/UTC")
+             ] = WhereWeAreWeb.CalendarHelpers.event_dates(event, "Etc/UTC")
     end
   end
 end
