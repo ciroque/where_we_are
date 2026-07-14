@@ -235,7 +235,7 @@ defmodule WhereWeAreWeb.CalendarLive do
     event_colors =
       all_events
       |> Enum.flat_map(fn event ->
-        case {event.calendar_name, event.calendar_color} do
+        case {Map.get(event, :calendar_name), Map.get(event, :calendar_color)} do
           {name, color} when is_binary(name) and not is_nil(color) -> [{name, color}]
           _ -> []
         end
