@@ -48,10 +48,12 @@ defmodule WhereWeAre.CalendarSyncTest do
              poll_interval: :timer.minutes(10),
              event_window_months: 6,
              expand_recurrences: true,
-             credentials: %{username: "person@example.com", password: "app-specific-password"},
+             credentials: %{username: "person@example.com", password: :redacted},
              last_sync: nil,
              last_error: nil,
-             events: []
+             events: [],
+             calendars: [],
+             configured_calendars: []
            }
   end
 

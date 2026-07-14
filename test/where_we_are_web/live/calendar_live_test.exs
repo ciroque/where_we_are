@@ -193,18 +193,14 @@ defmodule WhereWeAreWeb.CalendarLiveTest do
     refute html =~ "New Event"
 
     :ok =
-      GenServer.call(
-        server_name,
-        {:set_events,
-         [
-           WhereWeAre.Calendar.Event.new(%{
-             uid: "new-1",
-             summary: "New Event",
-             calendar_name: "Work",
-             dtstart: Date.utc_today()
-           })
-         ]}
-      )
+      WhereWeAre.CalendarSyncHelpers.put_events(server_name, [
+        WhereWeAre.Calendar.Event.new(%{
+          uid: "new-1",
+          summary: "New Event",
+          calendar_name: "Work",
+          dtstart: Date.utc_today()
+        })
+      ])
 
     Phoenix.PubSub.broadcast(WhereWeAre.PubSub, WhereWeAre.CalendarSync.topic(server_name), :events_updated)
 
