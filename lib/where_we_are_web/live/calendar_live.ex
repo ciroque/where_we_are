@@ -25,7 +25,9 @@ defmodule WhereWeAreWeb.CalendarLive do
         Phoenix.PubSub.subscribe(WhereWeAre.PubSub, WhereWeAre.CalendarSync.topic(calendar_sync))
         schedule_day_refresh(today, timezone)
       end
-    all_events = WhereWeAre.CalendarSync.events_for_month(calendar_sync, displayed_month)
+    all_events =
+      WhereWeAre.CalendarSync.events_for_month(calendar_sync, displayed_month, timezone)
+
     {known_calendars, calendar_colors} = fetch_known_calendars(calendar_sync, all_events)
 
     selected =
@@ -67,10 +69,11 @@ defmodule WhereWeAreWeb.CalendarLive do
       calendar_sync: calendar_sync,
       displayed_month: month,
       selected_calendars: selected,
-      known_calendars: prev_known
+      known_calendars: prev_known,
+      timezone: timezone
     } = socket.assigns
 
-    all_events = WhereWeAre.CalendarSync.events_for_month(calendar_sync, month)
+    all_events = WhereWeAre.CalendarSync.events_for_month(calendar_sync, month, timezone)
     {known_calendars, calendar_colors} = fetch_known_calendars(calendar_sync, all_events)
 
     prev_known_set = MapSet.new(prev_known)
@@ -154,8 +157,13 @@ defmodule WhereWeAreWeb.CalendarLive do
   end
 
   defp load_month(socket, month) do
-    %{calendar_sync: calendar_sync, calendar_colors: existing_colors} = socket.assigns
-    all_events = WhereWeAre.CalendarSync.events_for_month(calendar_sync, month)
+    %{
+      calendar_sync: calendar_sync,
+      calendar_colors: existing_colors,
+      timezone: timezone
+    } = socket.assigns
+
+    all_events = WhereWeAre.CalendarSync.events_for_month(calendar_sync, month, timezone)
     new_colors = derive_calendar_colors({:ok, []}, all_events)
 
     socket

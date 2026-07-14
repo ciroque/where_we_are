@@ -3,6 +3,8 @@ defmodule WhereWeAreWeb.CalendarLiveTest do
 
   import Phoenix.LiveViewTest
 
+  alias WhereWeAre.Calendar.Event
+
   test "renders current month calendar", %{conn: conn} do
     {:ok, view, html} = live(conn, ~p"/")
 
@@ -121,7 +123,7 @@ defmodule WhereWeAreWeb.CalendarLiveTest do
     end
 
     event =
-      WhereWeAre.Calendar.Event.new(%{
+      Event.new(%{
         uid: "event-1",
         summary: "Event One",
         calendar_name: "Work",
@@ -197,7 +199,7 @@ defmodule WhereWeAreWeb.CalendarLiveTest do
         server_name,
         {:set_events,
          [
-           WhereWeAre.Calendar.Event.new(%{
+           Event.new(%{
              uid: "new-1",
              summary: "New Event",
              calendar_name: "Work",
@@ -243,7 +245,7 @@ defmodule WhereWeAreWeb.CalendarLiveTest do
     server_name = __MODULE__
 
     event =
-      WhereWeAre.Calendar.Event.new(%{
+      Event.new(%{
         uid: "test-event-uid",
         summary: "Test Event",
         calendar_name: "Test Calendar",
