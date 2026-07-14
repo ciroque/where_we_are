@@ -2,6 +2,9 @@ defmodule WhereWeAre.CalendarSync.CaldavClient do
   @moduledoc """
   Wrapper around CalDAVEx that handles authentication, calendar discovery, and event retrieval.
   """
+
+  alias WhereWeAre.Calendar.Event
+
   @base_url "https://caldav.icloud.com"
 
   def authenticate(config) do
@@ -94,7 +97,7 @@ defmodule WhereWeAre.CalendarSync.CaldavClient do
         }
 
         tagged =
-          Enum.map(calendar_events, &WhereWeAre.Calendar.Event.from_caldav(&1, meta))
+          Enum.map(calendar_events, &Event.from_caldav(&1, meta))
 
         {:cont, {:ok, [tagged | events]}}
 

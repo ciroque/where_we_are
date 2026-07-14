@@ -1,6 +1,7 @@
 defmodule WhereWeAreWeb.PageControllerTest do
   use WhereWeAreWeb.ConnCase
 
+  alias WhereWeAre.Calendar.Event
   alias WhereWeAreWeb.PageHTML
 
   describe "PageHTML.calendar_color/1 and /2" do
@@ -83,12 +84,12 @@ defmodule WhereWeAreWeb.PageControllerTest do
     today = ~D[2024-01-15]
 
     events = [
-      WhereWeAre.Calendar.Event.new(%{
+      Event.new(%{
         uid: "dinner",
         dtstart: DateTime.new!(~D[2024-01-20], ~T[18:00:00], "Etc/UTC"),
         summary: "Family Dinner"
       }),
-      WhereWeAre.Calendar.Event.new(%{
+      Event.new(%{
         uid: "lunch",
         dtstart: DateTime.new!(~D[2024-01-10], ~T[12:00:00], "Etc/UTC"),
         summary: "Team Lunch"
@@ -121,7 +122,7 @@ defmodule WhereWeAreWeb.PageControllerTest do
     today = ~D[2024-01-15]
 
     events = [
-      WhereWeAre.Calendar.Event.new(%{
+      Event.new(%{
         uid: "late-utc",
         dtstart: DateTime.new!(~D[2024-01-16], ~T[02:00:00], "Etc/UTC"),
         summary: "Late Night Event"
