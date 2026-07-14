@@ -40,10 +40,16 @@ defmodule WhereWeAre.Calendar.Event do
         fetch(raw, :id) ||
         generate_uid(raw)
 
+    dtstart = fetch(raw, :dtstart)
+
+    if is_nil(dtstart) do
+      raise ArgumentError, "calendar event is missing :dtstart"
+    end
+
     %__MODULE__{
       uid: to_string(uid),
       summary: fetch(raw, :summary) || fetch(raw, :title),
-      dtstart: fetch(raw, :dtstart),
+      dtstart: dtstart,
       dtend: fetch(raw, :dtend),
       location: fetch(raw, :location),
       description: fetch(raw, :description),
