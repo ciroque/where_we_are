@@ -2,6 +2,9 @@ defmodule WhereWeAre.CalendarSync.CaldavClient do
   @moduledoc """
   Wrapper around CalDAVEx that handles authentication, calendar discovery, and event retrieval.
   """
+
+  alias WhereWeAre.Calendar.Event
+
   @base_url "https://caldav.icloud.com"
 
   def authenticate(config) do
@@ -88,18 +91,28 @@ defmodule WhereWeAre.CalendarSync.CaldavClient do
   defp gather_events(calendar, {:ok, events}, client, caldav_client, time_range_opts) do
     case client.list_events(caldav_client, calendar.url, time_range_opts) do
       {:ok, calendar_events} ->
+        meta = %{
+          calendar_name: calendar.display_name,
+          calendar_color: Map.get(calendar, :color) || Map.get(calendar, "color")
+        }
+
         tagged =
-          Enum.map(calendar_events, fn event ->
-            event
-            |> Map.put(:calendar_name, calendar.display_name)
-            |> Map.put(:calendar_color, Map.get(calendar, :color) || Map.get(calendar, "color"))
-          end)
+          calendar_events
+          |> Enum.filter(&valid_event?/1)
+          |> Enum.map(&Event.from_caldav(&1, meta))
+
         {:cont, {:ok, [tagged | events]}}
 
       {:error, reason} ->
         {:halt, {:error, reason}}
     end
   end
+
+  defp valid_event?(event) when is_map(event) do
+    not is_nil(Map.get(event, :dtstart) || Map.get(event, "dtstart"))
+  end
+
+  defp valid_event?(_event), do: false
 
   defp finalize_event_accumulation({:ok, events}) do
     events

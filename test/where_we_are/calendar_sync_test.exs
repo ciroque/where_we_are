@@ -1,11 +1,21 @@
 defmodule WhereWeAre.CalendarSyncTest do
   use ExUnit.Case, async: true
 
+  alias WhereWeAre.Calendar.Event
   alias WhereWeAre.CalendarSync
 
   defmodule SuccessfulClient do
+    alias WhereWeAre.Calendar.Event
+
     def fetch_events(_config) do
-      {:ok, [%{id: "family-dinner", title: "Family Dinner"}]}
+      {:ok,
+       [
+         Event.new(%{
+           uid: "family-dinner",
+           summary: "Family Dinner",
+           dtstart: ~D[2024-01-15]
+         })
+       ]}
     end
   end
 
@@ -47,16 +57,24 @@ defmodule WhereWeAre.CalendarSyncTest do
          schedule?: false}
       )
 
-    assert {:ok, [%{title: "Family Dinner"}]} = CalendarSync.sync_now(pid)
+    assert {:ok, [%Event{summary: "Family Dinner"}]} =
+             CalendarSync.sync_now(pid)
 
     assert %{
-             events: [%{title: "Family Dinner"}],
+             events: [%Event{summary: "Family Dinner"}],
              last_sync: %DateTime{},
              last_error: nil
            } = CalendarSync.state(pid)
   end
 
   test "sync_now keeps current events and records the error when fetch fails" do
+    existing =
+      Event.new(%{
+        uid: "existing",
+        summary: "Existing Event",
+        dtstart: ~D[2024-01-01]
+      })
+
     {:ok, pid} =
       start_supervised(
         {CalendarSync,
@@ -64,14 +82,14 @@ defmodule WhereWeAre.CalendarSyncTest do
          client: FailingClient,
          poll_interval: :timer.minutes(10),
          credentials: %{username: "person@example.com", password: "app-specific-password"},
-         initial_events: [%{id: "existing", title: "Existing Event"}],
+         initial_events: [existing],
          schedule?: false}
       )
 
     assert {:error, :icloud_unavailable} = CalendarSync.sync_now(pid)
 
     assert %{
-             events: [%{title: "Existing Event"}],
+             events: [%Event{summary: "Existing Event"}],
              last_error: :icloud_unavailable,
              last_sync: nil
            } = CalendarSync.state(pid)
