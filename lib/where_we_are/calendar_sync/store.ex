@@ -53,8 +53,8 @@ defmodule WhereWeAre.CalendarSync.Store do
     %{store | last_error: reason}
   end
 
-  def events_for_month(%__MODULE__{events: events}, month_start) do
-    Window.events_for_month(events, month_start)
+  def events_for_month(%__MODULE__{events: events}, month_start, timezone \\ "Etc/UTC") do
+    Window.events_for_month(events, month_start, timezone)
   end
 
   def configured_calendars(%__MODULE__{credentials: credentials}) do
