@@ -13,11 +13,16 @@ defmodule WhereWeAre.Calendar.Window do
   - `%Date{}` ends are shifted back one day
   - `%DateTime{}` ends are shifted back one second before converting to a date
   """
-  def end_date(event, timezone \\ "Etc/UTC") do
-    start = local_date(event_start(event), timezone)
-    finish = finish_date(event, timezone, start)
-    if Date.compare(start, finish) == :gt, do: start, else: finish
+def end_date(event, timezone \\ "Etc/UTC") do
+  start = local_date(event_start(event), timezone)
+
+  if is_nil(start) do
+    raise ArgumentError, "calendar event is missing or has an invalid :dtstart"
   end
+
+  finish = finish_date(event, timezone, start)
+  if Date.compare(start, finish) == :gt, do: start, else: finish
+end
 
   @doc """
   True when the event overlaps the inclusive `[range_start, range_end]` date range.
