@@ -5,8 +5,11 @@ defmodule WhereWeAre.CalendarSyncTest do
   alias WhereWeAre.CalendarSync
 
   defmodule SuccessfulClient do
+    @behaviour WhereWeAre.Calendar.Client
+
     alias WhereWeAre.Calendar.Event
 
+    @impl true
     def fetch_events(_config) do
       {:ok,
        [

@@ -3,6 +3,8 @@ defmodule WhereWeAre.CalendarSync.CaldavClient do
   Wrapper around CalDAVEx that handles authentication, calendar discovery, and event retrieval.
   """
 
+  @behaviour WhereWeAre.Calendar.Client
+
   alias WhereWeAre.Calendar.Event
 
   @base_url "https://caldav.icloud.com"
