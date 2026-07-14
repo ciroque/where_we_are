@@ -123,7 +123,7 @@ defmodule WhereWeAreWeb.CalendarLive do
   end
 
   def handle_event("show_event", %{"uid" => uid}, socket) when is_binary(uid) do
-    event = Enum.find(socket.assigns.events, fn e -> e.uid == uid end)
+    event = Enum.find(socket.assigns.events, fn e -> Map.get(e, :uid) == uid end)
     {:noreply, assign(socket, selected_event: event)}
   end
 
@@ -180,12 +180,12 @@ defmodule WhereWeAreWeb.CalendarLive do
 
     events =
       Enum.filter(all_events, fn event ->
-        MapSet.member?(selected, event.calendar_name)
+        MapSet.member?(selected, Map.get(event, :calendar_name))
       end)
 
     selected_event =
       with %{uid: uid} <- socket.assigns.selected_event,
-           event <- Enum.find(events, &(&1.uid == uid)) do
+           event <- Enum.find(events, &(Map.get(&1, :uid) == uid)) do
         event
       else
         _ -> nil
