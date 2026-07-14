@@ -71,6 +71,11 @@ defmodule WhereWeAre.Calendar.WindowTest do
              ] = Window.days_in_range(event, "Etc/UTC")
     end
 
+    test "falls back to start when computed end is earlier than start" do
+      event = %{dtstart: ~D[2024-01-15], dtend: ~D[2024-01-15]}
+      assert [~D[2024-01-15]] = Window.days_in_range(event, "Etc/UTC")
+    end
+
     test "clamps days to the provided grid window" do
       event = %{dtstart: ~D[2024-01-01], dtend: ~D[2024-01-10]}
 
