@@ -254,7 +254,7 @@ defmodule WhereWeAreWeb.CalendarLive do
 
   defp derive_known_calendars(events) do
     events
-    |> Enum.map(& &1.calendar_name)
+    |> Enum.map(&Map.get(&1, :calendar_name))
     |> Enum.reject(&is_nil/1)
     |> Enum.uniq()
     |> Enum.sort()
