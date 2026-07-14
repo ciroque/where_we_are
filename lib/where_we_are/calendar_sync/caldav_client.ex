@@ -5,6 +5,8 @@ defmodule WhereWeAre.CalendarSync.CaldavClient do
 
   @behaviour WhereWeAre.Calendar.Client
 
+  alias WhereWeAre.Calendar.Event
+
   @base_url "https://caldav.icloud.com"
 
   def authenticate(config) do
@@ -84,7 +86,9 @@ defmodule WhereWeAre.CalendarSync.CaldavClient do
         }
 
         tagged =
-          Enum.map(calendar_events, &WhereWeAre.Calendar.Event.from_caldav(&1, meta))
+          calendar_events
+          |> Enum.filter(&valid_event?/1)
+          |> Enum.map(&Event.from_caldav(&1, meta))
 
         {:cont, {:ok, [tagged | events]}}
 
@@ -92,6 +96,12 @@ defmodule WhereWeAre.CalendarSync.CaldavClient do
         {:halt, {:error, reason}}
     end
   end
+
+  defp valid_event?(event) when is_map(event) do
+    not is_nil(Map.get(event, :dtstart) || Map.get(event, "dtstart"))
+  end
+
+  defp valid_event?(_event), do: false
 
   defp finalize_event_accumulation({:ok, events}) do
     events
