@@ -76,6 +76,9 @@ defmodule WhereWeAre.Calendar.Event do
   end
 
   defp generate_uid(raw) do
-    :erlang.phash2({fetch(raw, :dtstart), fetch(raw, :summary), fetch(raw, :title)})
+    "generated-" <>
+      Integer.to_string(
+        :erlang.phash2({fetch(raw, :dtstart), fetch(raw, :summary), fetch(raw, :title)})
+      )
   end
 end
