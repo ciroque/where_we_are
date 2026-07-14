@@ -83,16 +83,16 @@ defmodule WhereWeAreWeb.PageControllerTest do
     today = ~D[2024-01-15]
 
     events = [
-      %{
-        id: "dinner",
+      WhereWeAre.Calendar.Event.new(%{
+        uid: "dinner",
         dtstart: DateTime.new!(~D[2024-01-20], ~T[18:00:00], "Etc/UTC"),
         summary: "Family Dinner"
-      },
-      %{
-        id: "lunch",
+      }),
+      WhereWeAre.Calendar.Event.new(%{
+        uid: "lunch",
         dtstart: DateTime.new!(~D[2024-01-10], ~T[12:00:00], "Etc/UTC"),
         summary: "Team Lunch"
-      }
+      })
     ]
 
     conn =
@@ -121,11 +121,11 @@ defmodule WhereWeAreWeb.PageControllerTest do
     today = ~D[2024-01-15]
 
     events = [
-      %{
-        id: "late-utc",
+      WhereWeAre.Calendar.Event.new(%{
+        uid: "late-utc",
         dtstart: DateTime.new!(~D[2024-01-16], ~T[02:00:00], "Etc/UTC"),
         summary: "Late Night Event"
-      }
+      })
     ]
 
     conn =

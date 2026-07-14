@@ -21,7 +21,7 @@ defmodule WhereWeAre.CalendarSync.CaldavClientTest do
 
     def list_events(caldav_client, "https://caldav.icloud.com/calendar/", _opts) do
       send(Process.get(:test_pid), {:list_events, caldav_client})
-      {:ok, [%{summary: "Test Event"}]}
+      {:ok, [%{uid: "test-1", summary: "Test Event", dtstart: ~D[2024-01-15]}]}
     end
   end
 
@@ -55,8 +55,14 @@ defmodule WhereWeAre.CalendarSync.CaldavClientTest do
       calendars: ["Home"]
     }
 
-    assert {:ok, [%{summary: "Test Event", calendar_name: "Home", calendar_color: "#FF2D55FF"}]} =
-             CaldavClient.fetch_events(config)
+    assert {:ok,
+            [
+              %WhereWeAre.Calendar.Event{
+                summary: "Test Event",
+                calendar_name: "Home",
+                calendar_color: "#FF2D55FF"
+              }
+            ]} = CaldavClient.fetch_events(config)
 
     assert_receive {:discover,
                     %CalDAVEx.Client{
@@ -78,8 +84,14 @@ defmodule WhereWeAre.CalendarSync.CaldavClientTest do
       calendars: ["Home"]
     }
 
-    assert {:ok, [%{summary: "Test Event", calendar_name: "Home", calendar_color: "#FF2D55FF"}]} =
-             CaldavClient.fetch_events(config)
+    assert {:ok,
+            [
+              %WhereWeAre.Calendar.Event{
+                summary: "Test Event",
+                calendar_name: "Home",
+                calendar_color: "#FF2D55FF"
+              }
+            ]} = CaldavClient.fetch_events(config)
 
     assert_receive {:discover,
                     %CalDAVEx.Client{

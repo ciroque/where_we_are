@@ -114,12 +114,13 @@ defmodule WhereWeAreWeb.CalendarLiveTest do
       def fetch_events(_config), do: {:ok, []}
     end
 
-    event = %{
-      uid: "event-1",
-      summary: "Event One",
-      calendar_name: "Work",
-      dtstart: ~D[2024-01-15]
-    }
+    event =
+      WhereWeAre.Calendar.Event.new(%{
+        uid: "event-1",
+        summary: "Event One",
+        calendar_name: "Work",
+        dtstart: ~D[2024-01-15]
+      })
 
     start_supervised!(
       {WhereWeAre.CalendarSync,
@@ -182,12 +183,19 @@ defmodule WhereWeAreWeb.CalendarLiveTest do
     {:ok, view, html} = live(conn, ~p"/")
     refute html =~ "New Event"
 
-    :ok = GenServer.call(server_name, {:set_events, [%{
-      uid: "new-1",
-      summary: "New Event",
-      calendar_name: "Work",
-      dtstart: Date.utc_today()
-    }]})
+    :ok =
+      GenServer.call(
+        server_name,
+        {:set_events,
+         [
+           WhereWeAre.Calendar.Event.new(%{
+             uid: "new-1",
+             summary: "New Event",
+             calendar_name: "Work",
+             dtstart: Date.utc_today()
+           })
+         ]}
+      )
 
     Phoenix.PubSub.broadcast(WhereWeAre.PubSub, WhereWeAre.CalendarSync.topic(server_name), :events_updated)
 
@@ -222,13 +230,14 @@ defmodule WhereWeAreWeb.CalendarLiveTest do
     today = Date.utc_today()
     server_name = __MODULE__
 
-    event = %{
-      uid: "test-event-uid",
-      summary: "Test Event",
-      calendar_name: "Test Calendar",
-      dtstart: today,
-      description: "A test event description"
-    }
+    event =
+      WhereWeAre.Calendar.Event.new(%{
+        uid: "test-event-uid",
+        summary: "Test Event",
+        calendar_name: "Test Calendar",
+        dtstart: today,
+        description: "A test event description"
+      })
 
     start_supervised!(
       {WhereWeAre.CalendarSync, name: server_name, schedule?: false, initial_events: [event]}
