@@ -68,7 +68,7 @@ defmodule WhereWeAre.CalendarSync do
           {:ok, calendars}
 
         _ ->
-          store.client.list_calendars(store.credentials)
+          store.client.list_calendars(Store.client_config(store))
       end
 
     {:reply, reply, store}
@@ -99,7 +99,7 @@ defmodule WhereWeAre.CalendarSync do
     case store.client.fetch_events(config) do
       {:ok, events} ->
         calendars =
-          case store.client.list_calendars(store.credentials) do
+          case store.client.list_calendars(config) do
             {:ok, list} when is_list(list) -> list
             _ -> store.calendars
           end
@@ -110,6 +110,7 @@ defmodule WhereWeAre.CalendarSync do
 
       {:error, reason} ->
         store = Store.put_error(store, reason)
+        Phoenix.PubSub.broadcast(WhereWeAre.PubSub, topic(store.name), :events_updated)
         {{:error, reason}, store}
     end
   end

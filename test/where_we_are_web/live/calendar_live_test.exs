@@ -75,6 +75,37 @@ defmodule WhereWeAreWeb.CalendarLiveTest do
     refute html =~ "No calendar filter is configured"
   end
 
+  test "shows and dismisses sync error banner", %{conn: conn} do
+    server_name = :"sync_error_banner_#{System.unique_integer([:positive])}"
+
+    defmodule ErrorBannerClient do
+      @behaviour WhereWeAre.Calendar.Client
+      @impl true
+      def list_calendars(_config), do: {:error, :icloud_unavailable}
+      @impl true
+      def fetch_events(_config), do: {:error, :icloud_unavailable}
+    end
+
+    start_supervised!(
+      {WhereWeAre.CalendarSync,
+       name: server_name,
+       schedule?: false,
+       client: ErrorBannerClient,
+       credentials: %{username: "u", password: "p"}}
+    )
+
+    assert {:error, :icloud_unavailable} = WhereWeAre.CalendarSync.sync_now(server_name)
+
+    conn = conn |> init_test_session(%{"calendar_sync" => Atom.to_string(server_name)})
+    {:ok, view, html} = live(conn, ~p"/")
+
+    assert html =~ "Calendar sync failed"
+    assert html =~ "icloud_unavailable"
+
+    html = view |> element("button[aria-label='Dismiss sync error']") |> render_click()
+    refute html =~ "Calendar sync failed"
+  end
+
   test "does not show notice when a calendar filter is configured", %{conn: conn} do
     server_name = __MODULE__
 

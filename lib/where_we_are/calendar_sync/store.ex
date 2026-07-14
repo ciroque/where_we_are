@@ -14,6 +14,10 @@ defmodule WhereWeAre.CalendarSync.Store do
             poll_interval: :timer.minutes(10),
             event_window_months: 6,
             expand_recurrences: true,
+            auth: %{},
+            server: %{},
+            filter: %{},
+            # Legacy keyword still accepted via `credentials:` for tests and older config.
             credentials: %{},
             last_sync: nil,
             last_error: nil,
@@ -24,13 +28,18 @@ defmodule WhereWeAre.CalendarSync.Store do
   @type t :: %__MODULE__{}
 
   def new(opts) when is_list(opts) do
+    {auth, server, filter, credentials} = connection_parts(opts)
+
     %__MODULE__{
       client: Keyword.get(opts, :client, WhereWeAre.Calendar.NoopClient),
       name: Keyword.get(opts, :name, WhereWeAre.CalendarSync),
       poll_interval: Keyword.get(opts, :poll_interval, :timer.minutes(10)),
       event_window_months: Keyword.get(opts, :event_window_months, 6),
       expand_recurrences: Keyword.get(opts, :expand_recurrences, true),
-      credentials: Keyword.get(opts, :credentials, %{}),
+      auth: auth,
+      server: server,
+      filter: filter,
+      credentials: credentials,
       events: Keyword.get(opts, :initial_events, []),
       calendars: Keyword.get(opts, :initial_calendars, []),
       schedule?: Keyword.get(opts, :schedule?, true)
@@ -57,15 +66,22 @@ defmodule WhereWeAre.CalendarSync.Store do
     Window.events_for_month(events, month_start)
   end
 
-  def configured_calendars(%__MODULE__{credentials: credentials}) do
-    case credentials do
-      %{calendars: calendars} when is_list(calendars) -> calendars
-      _ -> []
+  def configured_calendars(%__MODULE__{filter: filter, credentials: credentials}) do
+    cond do
+      is_list(Map.get(filter, :calendars)) -> Map.get(filter, :calendars)
+      is_list(Map.get(credentials, :calendars)) -> Map.get(credentials, :calendars)
+      true -> []
     end
   end
 
+  @doc """
+  Flat config map consumed by calendar clients (auth + server + filter + sync knobs).
+  """
   def client_config(%__MODULE__{} = store) do
     store.credentials
+    |> Map.merge(store.auth)
+    |> Map.merge(store.server)
+    |> Map.merge(store.filter)
     |> Map.put(:event_window_months, store.event_window_months)
     |> Map.put(:expand_recurrences, store.expand_recurrences)
   end
@@ -79,13 +95,36 @@ defmodule WhereWeAre.CalendarSync.Store do
       poll_interval: store.poll_interval,
       event_window_months: store.event_window_months,
       expand_recurrences: store.expand_recurrences,
-      credentials: redact_credentials(store.credentials),
+      credentials: redact_credentials(connection_credentials(store)),
       last_sync: store.last_sync,
       last_error: store.last_error,
       events: store.events,
       calendars: store.calendars,
       configured_calendars: configured_calendars(store)
     }
+  end
+
+  defp connection_credentials(%__MODULE__{} = store) do
+    store.credentials
+    |> Map.merge(store.auth)
+    |> Map.merge(store.server)
+    |> Map.merge(store.filter)
+  end
+
+  defp connection_parts(opts) do
+    credentials = Keyword.get(opts, :credentials, %{})
+    auth = Keyword.get(opts, :auth, Map.take(credentials, [:username, :password]))
+    server = Keyword.get(opts, :server, Map.take(credentials, [:url]))
+    filter = Keyword.get(opts, :filter, Map.take(credentials, [:calendars]))
+
+    # Keep a credentials map for backwards-compatible tests that only pass credentials.
+    merged =
+      credentials
+      |> Map.merge(auth)
+      |> Map.merge(server)
+      |> Map.merge(filter)
+
+    {auth, server, filter, merged}
   end
 
   defp redact_credentials(%{password: _} = credentials) do

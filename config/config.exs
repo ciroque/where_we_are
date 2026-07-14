@@ -15,7 +15,9 @@ config :elixir, :time_zone_database, Tz.TimeZoneDatabase
 config :where_we_are, WhereWeAre.CalendarSync,
   client: WhereWeAre.Calendar.NoopClient,
   poll_interval: :timer.minutes(10),
-  credentials: %{}
+  auth: %{},
+  server: %{},
+  filter: %{}
 
 # Configures the endpoint
 config :where_we_are, WhereWeAreWeb.Endpoint,
