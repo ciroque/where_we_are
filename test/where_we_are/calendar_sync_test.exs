@@ -4,6 +4,9 @@ defmodule WhereWeAre.CalendarSyncTest do
   alias WhereWeAre.CalendarSync
 
   defmodule SuccessfulClient do
+    @behaviour WhereWeAre.Calendar.Client
+
+    @impl true
     def fetch_events(_config) do
       {:ok,
        [
@@ -14,10 +17,19 @@ defmodule WhereWeAre.CalendarSyncTest do
          })
        ]}
     end
+
+    @impl true
+    def list_calendars(_config), do: {:ok, []}
   end
 
   defmodule FailingClient do
+    @behaviour WhereWeAre.Calendar.Client
+
+    @impl true
     def fetch_events(_config), do: {:error, :icloud_unavailable}
+
+    @impl true
+    def list_calendars(_config), do: {:error, :icloud_unavailable}
   end
 
   test "starts with configured client, poll interval, and credentials" do

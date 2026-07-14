@@ -79,7 +79,10 @@ defmodule WhereWeAreWeb.CalendarLiveTest do
     server_name = __MODULE__
 
     defmodule FilteredCalendarClient do
+      @behaviour WhereWeAre.Calendar.Client
+      @impl true
       def list_calendars(_config), do: {:ok, [%{display_name: "Work"}]}
+      @impl true
       def fetch_events(_config), do: {:ok, []}
     end
 
@@ -110,7 +113,10 @@ defmodule WhereWeAreWeb.CalendarLiveTest do
     server_name = __MODULE__
 
     defmodule StableCalendarClient do
+      @behaviour WhereWeAre.Calendar.Client
+      @impl true
       def list_calendars(_config), do: {:ok, [%{display_name: "Work"}]}
+      @impl true
       def fetch_events(_config), do: {:ok, []}
     end
 
@@ -165,7 +171,10 @@ defmodule WhereWeAreWeb.CalendarLiveTest do
     server_name = __MODULE__
 
     defmodule PubSubSyncClient do
+      @behaviour WhereWeAre.Calendar.Client
+      @impl true
       def list_calendars(_config), do: {:ok, [%{display_name: "Work"}]}
+      @impl true
       def fetch_events(_config), do: {:ok, []}
     end
 
@@ -206,7 +215,10 @@ defmodule WhereWeAreWeb.CalendarLiveTest do
     server_name = __MODULE__
 
     defmodule ColoredCalendarClient do
+      @behaviour WhereWeAre.Calendar.Client
+      @impl true
       def list_calendars(_config), do: {:ok, [%{display_name: "Home", color: "#FF2D55FF"}]}
+      @impl true
       def fetch_events(_config), do: {:ok, []}
     end
 

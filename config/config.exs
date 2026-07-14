@@ -13,7 +13,7 @@ config :where_we_are,
 config :elixir, :time_zone_database, Tz.TimeZoneDatabase
 
 config :where_we_are, WhereWeAre.CalendarSync,
-  client: WhereWeAre.CalendarSync.NoopClient,
+  client: WhereWeAre.Calendar.NoopClient,
   poll_interval: :timer.minutes(10),
   credentials: %{}
 

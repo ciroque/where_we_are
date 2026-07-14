@@ -6,14 +6,6 @@ defmodule WhereWeAre.CalendarSync do
 
   @default_poll_interval :timer.minutes(10)
 
-  defmodule NoopClient do
-    @moduledoc """
-    Minimal client implementation that returns no events for testing and defaults.
-    """
-    def fetch_events(_config), do: {:ok, []}
-    def list_calendars(_config), do: {:ok, []}
-  end
-
   defstruct client: nil,
             name: nil,
             poll_interval: @default_poll_interval,
@@ -58,7 +50,7 @@ defmodule WhereWeAre.CalendarSync do
   @impl true
   def init(opts) do
     state = %__MODULE__{
-      client: Keyword.get(opts, :client, NoopClient),
+      client: Keyword.get(opts, :client, WhereWeAre.Calendar.NoopClient),
       name: Keyword.get(opts, :name, __MODULE__),
       poll_interval: Keyword.get(opts, :poll_interval, @default_poll_interval),
       event_window_months: Keyword.get(opts, :event_window_months, 6),
