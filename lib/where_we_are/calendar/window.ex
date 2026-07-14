@@ -112,7 +112,7 @@ defmodule WhereWeAre.Calendar.Window do
   defp start_date(%{dtstart: %Date{} = date}), do: {:ok, date}
   defp start_date(_event), do: :error
 
-  # UTC date form used for month filtering (matches historical CalendarSync behavior).
+  # Date-only form used for month filtering (matches historical CalendarSync behavior).
   defp exclusive_end_as_inclusive(event) do
     case Map.get(event, :dtend) do
       nil ->
