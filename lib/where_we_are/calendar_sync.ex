@@ -1,6 +1,12 @@
 defmodule WhereWeAre.CalendarSync do
   @moduledoc """
-  Manages and schedules the CalDAV synchronization process, exposing sync state and controls.
+  OTP boundary for calendar synchronization.
+
+  Schedules CalDAV polls, stores the latest successful event list, caches
+  calendar metadata, and broadcasts `:events_updated` on PubSub.
+
+  Prefer `configured_calendars/1` and redacted `state/1` over digging into
+  connection secrets. Password values are never returned from `state/1`.
   """
   use GenServer
 
@@ -11,23 +17,28 @@ defmodule WhereWeAre.CalendarSync do
     GenServer.start_link(__MODULE__, opts, name: name)
   end
 
+  @doc "PubSub topic for a given sync server name or pid."
   def topic(server \\ __MODULE__) do
     server_id = if is_atom(server), do: Atom.to_string(server), else: inspect(server)
     "calendar_sync:" <> server_id
   end
 
+  @doc "Force an immediate sync."
   def sync_now(server \\ __MODULE__) do
     GenServer.call(server, :sync_now)
   end
 
+  @doc "Redacted public status (password never included)."
   def state(server \\ __MODULE__) do
     GenServer.call(server, :state)
   end
 
+  @doc "Cached calendar catalog when available, otherwise live client list."
   def list_calendars(server \\ __MODULE__) do
     GenServer.call(server, :list_calendars)
   end
 
+  @doc "Configured `CALDAV_CALENDARS` allow-list (may be empty)."
   def configured_calendars(server \\ __MODULE__) do
     GenServer.call(server, :configured_calendars)
   end
@@ -36,6 +47,7 @@ defmodule WhereWeAre.CalendarSync do
     events_for_month(__MODULE__, month_start)
   end
 
+  @doc "Events overlapping the calendar month of `month_start`."
   def events_for_month(server, month_start) do
     GenServer.call(server, {:events_for_month, month_start})
   end
