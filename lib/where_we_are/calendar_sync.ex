@@ -4,6 +4,8 @@ defmodule WhereWeAre.CalendarSync do
   """
   use GenServer
 
+  alias WhereWeAre.Calendar.Window
+
   @default_poll_interval :timer.minutes(10)
 
   defmodule NoopClient do
@@ -48,11 +50,15 @@ defmodule WhereWeAre.CalendarSync do
   end
 
   def events_for_month(month_start) do
-    events_for_month(__MODULE__, month_start)
+    events_for_month(__MODULE__, month_start, "Etc/UTC")
   end
 
   def events_for_month(server, month_start) do
-    GenServer.call(server, {:events_for_month, month_start})
+    events_for_month(server, month_start, "Etc/UTC")
+  end
+
+  def events_for_month(server, month_start, timezone) when is_binary(timezone) do
+    GenServer.call(server, {:events_for_month, month_start, timezone})
   end
 
   @impl true
@@ -96,17 +102,8 @@ defmodule WhereWeAre.CalendarSync do
     end
   end
 
-  def handle_call({:events_for_month, month_start}, _from, state) do
-    month_start = Date.beginning_of_month(month_start)
-    month_end = Date.end_of_month(month_start)
-
-    events =
-      state.events
-      |> Enum.filter(&event_in_range?(&1, month_start, month_end))
-      |> Enum.sort_by(&event_sort_key/1, fn left, right ->
-        DateTime.compare(left, right) != :gt
-      end)
-
+  def handle_call({:events_for_month, month_start, timezone}, _from, state) do
+    events = Window.events_for_month(state.events, month_start, timezone)
     {:reply, events, state}
   end
 
@@ -150,46 +147,5 @@ defmodule WhereWeAre.CalendarSync do
       last_error: state.last_error,
       events: state.events
     }
-  end
-
-  defp event_in_range?(event, month_start, month_end) do
-    case {event_date(event), event_end_date(event)} do
-      {{:ok, start_date}, {:ok, end_date}} ->
-        end_date =
-          if Date.compare(end_date, start_date) == :lt, do: start_date, else: end_date
-
-        Date.compare(start_date, month_end) in [:eq, :lt] and
-          Date.compare(end_date, month_start) in [:eq, :gt]
-
-      _ ->
-        false
-    end
-  end
-
-  defp event_sort_key(%{dtstart: %DateTime{} = dt}), do: dt
-
-  defp event_sort_key(%{dtstart: %Date{} = date}),
-    do: DateTime.new!(date, ~T[00:00:00], "Etc/UTC")
-
-  defp event_sort_key(_event), do: DateTime.new!(~D[0000-01-01], ~T[00:00:00], "Etc/UTC")
-
-  defp event_date(%{dtstart: %DateTime{} = dt}), do: {:ok, DateTime.to_date(dt)}
-  defp event_date(%{dtstart: %Date{} = date}), do: {:ok, date}
-  defp event_date(_event), do: :error
-
-  defp event_end_date(event) do
-    case Map.get(event, :dtend) do
-      nil ->
-        event_date(event)
-
-      %Date{} = date ->
-        {:ok, Date.add(date, -1)}
-
-      %DateTime{} = dt ->
-        {:ok, dt |> DateTime.add(-1, :second) |> DateTime.to_date()}
-
-      _other ->
-        :error
-    end
   end
 end
