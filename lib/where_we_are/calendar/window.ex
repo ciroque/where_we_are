@@ -55,13 +55,18 @@ end
   @doc """
   Inclusive local dates the event occupies, optionally clamped to a grid window.
   """
-  def days_in_range(event, timezone, grid_start \\ nil, grid_end \\ nil) do
-    start = local_date(event_start(event), timezone)
-    finish = end_date(event, timezone)
-    start = clamp_date(start, grid_start, :min)
-    finish = clamp_date(finish, grid_end, :max)
-    date_range(start, finish)
+def days_in_range(event, timezone, grid_start \\ nil, grid_end \\ nil) do
+  start = local_date(event_start(event), timezone)
+
+  if is_nil(start) do
+    raise ArgumentError, "calendar event is missing or has an invalid :dtstart"
   end
+
+  finish = end_date(event, timezone)
+  start = clamp_date(start, grid_start, :min)
+  finish = clamp_date(finish, grid_end, :max)
+  date_range(start, finish)
+end
 
   @doc """
   Chronological sort key for an event start.
