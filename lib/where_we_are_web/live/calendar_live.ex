@@ -1,6 +1,9 @@
 defmodule WhereWeAreWeb.CalendarLive do
   use WhereWeAreWeb, :live_view
 
+  alias WhereWeAre.CalendarSync
+  alias WhereWeAreWeb.Calendar.Assigns
+
   def session(conn) do
     session = %{
       "tz" => conn.cookies["tz"] || "",
@@ -15,24 +18,24 @@ defmodule WhereWeAreWeb.CalendarLive do
 
   @impl true
   def mount(params, session, socket) do
-    timezone = resolve_timezone(session)
+    timezone = Assigns.resolve_timezone(session)
     today = DateTime.now!(timezone) |> DateTime.to_date()
-    displayed_month = resolve_displayed_month(params, today)
-    calendar_sync = resolve_calendar_sync(session)
+    displayed_month = Assigns.resolve_displayed_month(params, today)
+    calendar_sync = Assigns.resolve_calendar_sync(session)
 
     day_refresh_ref =
       if connected?(socket) do
-        Phoenix.PubSub.subscribe(WhereWeAre.PubSub, WhereWeAre.CalendarSync.topic(calendar_sync))
+        Phoenix.PubSub.subscribe(WhereWeAre.PubSub, CalendarSync.topic(calendar_sync))
         schedule_day_refresh(today, timezone)
       end
-    all_events = WhereWeAre.CalendarSync.events_for_month(calendar_sync, displayed_month)
-    {known_calendars, calendar_colors} = fetch_known_calendars(calendar_sync, all_events)
+
+    all_events = CalendarSync.events_for_month(calendar_sync, displayed_month)
+    {known_calendars, calendar_colors} = load_calendar_meta(calendar_sync, all_events)
 
     selected =
-      case resolve_selected_calendars(session, known_calendars) do
-        :all -> MapSet.new(known_calendars)
-        names -> MapSet.new(names)
-      end
+      session
+      |> Assigns.resolve_selected_calendars(known_calendars)
+      |> Assigns.selected_set(known_calendars)
 
     last_error = sync_last_error(calendar_sync)
 
@@ -48,7 +51,7 @@ defmodule WhereWeAreWeb.CalendarLive do
        calendar_colors: calendar_colors,
        selected_calendars: selected,
        selected_event: nil,
-       show_filter_notice: configured_calendars(calendar_sync) == [],
+       show_filter_notice: CalendarSync.configured_calendars(calendar_sync) == [],
        last_error: last_error,
        show_sync_error: last_error != nil,
        day_refresh_ref: day_refresh_ref
@@ -65,7 +68,6 @@ defmodule WhereWeAreWeb.CalendarLive do
     {:noreply, assign(socket, today: today, day_refresh_ref: ref)}
   end
 
-  @impl true
   def handle_info(:events_updated, socket) do
     %{
       calendar_sync: calendar_sync,
@@ -74,13 +76,9 @@ defmodule WhereWeAreWeb.CalendarLive do
       known_calendars: prev_known
     } = socket.assigns
 
-    all_events = WhereWeAre.CalendarSync.events_for_month(calendar_sync, month)
-    {known_calendars, calendar_colors} = fetch_known_calendars(calendar_sync, all_events)
-
-    prev_known_set = MapSet.new(prev_known)
-    new_calendars = Enum.reject(known_calendars, &MapSet.member?(prev_known_set, &1))
-    selected = MapSet.union(selected, MapSet.new(new_calendars))
-
+    all_events = CalendarSync.events_for_month(calendar_sync, month)
+    {known_calendars, calendar_colors} = load_calendar_meta(calendar_sync, all_events)
+    selected = Assigns.merge_selected_with_new(selected, prev_known, known_calendars)
     last_error = sync_last_error(calendar_sync)
 
     {:noreply,
@@ -104,7 +102,7 @@ defmodule WhereWeAreWeb.CalendarLive do
         {:noreply, load_month(socket, month)}
 
       %{"month" => month_param} ->
-        month = parse_month(month_param, socket.assigns.today)
+        month = Assigns.parse_month(month_param, socket.assigns.today)
         {:noreply, load_month(socket, month)}
 
       _ ->
@@ -128,13 +126,11 @@ defmodule WhereWeAreWeb.CalendarLive do
   end
 
   def handle_event("show_event", %{"uid" => uid}, socket) when is_binary(uid) do
-    event = Enum.find(socket.assigns.events, fn e -> e.uid == uid end)
+    event = Enum.find(socket.assigns.events, &(&1.uid == uid))
     {:noreply, assign(socket, selected_event: event)}
   end
 
-  def handle_event("show_event", _params, socket) do
-    {:noreply, socket}
-  end
+  def handle_event("show_event", _params, socket), do: {:noreply, socket}
 
   def handle_event("close_event", _, socket) do
     {:noreply, assign(socket, selected_event: nil)}
@@ -149,13 +145,7 @@ defmodule WhereWeAreWeb.CalendarLive do
   end
 
   def handle_event("toggle_calendar", %{"name" => name}, socket) do
-    selected = socket.assigns.selected_calendars
-
-    selected =
-      if MapSet.member?(selected, name),
-        do: MapSet.delete(selected, name),
-        else: MapSet.put(selected, name)
-
+    selected = Assigns.toggle_calendar(socket.assigns.selected_calendars, name)
     cookie_value = selected |> MapSet.to_list() |> Enum.join(",")
 
     {:noreply,
@@ -167,171 +157,47 @@ defmodule WhereWeAreWeb.CalendarLive do
 
   defp load_month(socket, month) do
     %{calendar_sync: calendar_sync, calendar_colors: existing_colors} = socket.assigns
-    all_events = WhereWeAre.CalendarSync.events_for_month(calendar_sync, month)
-    new_colors = derive_calendar_colors({:ok, []}, all_events)
+    all_events = CalendarSync.events_for_month(calendar_sync, month)
+    new_colors = Assigns.calendar_colors({:ok, []}, all_events)
 
     socket
     |> assign(
       displayed_month: month,
       all_events: all_events,
-      calendar_colors: Map.merge(existing_colors, new_colors, fn _k, old, new -> new || old end)
+      calendar_colors: Assigns.merge_colors(existing_colors, new_colors)
     )
     |> assign_filtered_events()
   end
 
   defp assign_filtered_events(socket) do
-    %{all_events: all_events, selected_calendars: selected} = socket.assigns
-
     events =
-      Enum.filter(all_events, fn event ->
-        MapSet.member?(selected, event.calendar_name)
-      end)
+      Assigns.filter_events(socket.assigns.all_events, socket.assigns.selected_calendars)
 
-    selected_event =
-      with %{uid: uid} <- socket.assigns.selected_event,
-           event <- Enum.find(events, &(&1.uid == uid)) do
-        event
-      else
-        _ -> nil
-      end
+    selected_event = Assigns.retain_selected_event(events, socket.assigns.selected_event)
 
     socket
     |> assign(events: events)
     |> assign(selected_event: selected_event)
   end
 
-  defp fetch_known_calendars(calendar_sync, all_events) do
-    calendars_result = WhereWeAre.CalendarSync.list_calendars(calendar_sync)
+  defp load_calendar_meta(calendar_sync, all_events) do
+    calendars_result = CalendarSync.list_calendars(calendar_sync)
+    configured = CalendarSync.configured_calendars(calendar_sync)
 
-    names =
-      case calendars_result do
-        {:ok, calendars} when is_list(calendars) and calendars != [] ->
-          Enum.map(calendars, &calendar_name/1)
-
-        {:ok, _calendars} ->
-          derive_known_calendars(all_events)
-
-        {:error, _reason} ->
-          configured_calendars(calendar_sync) ++ derive_known_calendars(all_events)
-      end
-      |> Enum.reject(&is_nil/1)
-      |> Enum.uniq()
-      |> Enum.sort()
-
-    colors = derive_calendar_colors(calendars_result, all_events)
-
-    {names, colors}
-  end
-
-  defp derive_calendar_colors(calendars_result, all_events) do
-    server_colors =
-      case calendars_result do
-        {:ok, calendars} when is_list(calendars) and calendars != [] ->
-          calendars
-          |> Enum.map(fn cal -> {calendar_name(cal), Map.get(cal, :color) || Map.get(cal, "color")} end)
-          |> Enum.reject(fn {name, _color} -> is_nil(name) end)
-          |> Map.new()
-
-        _ ->
-          %{}
-      end
-
-    event_colors =
-      all_events
-      |> Enum.flat_map(fn event ->
-        case {event.calendar_name, event.calendar_color} do
-          {name, color} when is_binary(name) and not is_nil(color) -> [{name, color}]
-          _ -> []
-        end
-      end)
-      |> Map.new()
-
-    Map.merge(event_colors, server_colors, fn _name, event_color, server_color -> server_color || event_color end)
-  end
-
-  defp configured_calendars(calendar_sync) do
-    WhereWeAre.CalendarSync.configured_calendars(calendar_sync)
+    {
+      Assigns.known_calendars(calendars_result, all_events, configured),
+      Assigns.calendar_colors(calendars_result, all_events)
+    }
   end
 
   defp sync_last_error(calendar_sync) do
-    case WhereWeAre.CalendarSync.state(calendar_sync) do
+    case CalendarSync.state(calendar_sync) do
       %{last_error: error} -> error
       _ -> nil
     end
   end
 
-  defp derive_known_calendars(events) do
-    events
-    |> Enum.map(& &1.calendar_name)
-    |> Enum.reject(&is_nil/1)
-    |> Enum.uniq()
-    |> Enum.sort()
-  end
-
-  defp calendar_name(%{display_name: name}) when is_binary(name), do: name
-  defp calendar_name(%{"display_name" => name}) when is_binary(name), do: name
-  defp calendar_name(_), do: nil
-
-  defp resolve_selected_calendars(%{"selected_calendars" => saved}, known_calendars)
-       when is_binary(saved) and saved != "" do
-    names = String.split(saved, ",", trim: true)
-    # Only keep names that are actually known to avoid stale entries
-    valid = Enum.filter(names, &(&1 in known_calendars))
-    if valid == [], do: :all, else: valid
-  end
-
-  defp resolve_selected_calendars(_session, _known_calendars), do: :all
-
-  defp resolve_calendar_sync(%{"calendar_sync" => name}) when is_binary(name) do
-    atom = String.to_existing_atom(name)
-
-    case Process.whereis(atom) do
-      nil -> WhereWeAre.CalendarSync
-      _pid -> atom
-    end
-  rescue
-    ArgumentError -> WhereWeAre.CalendarSync
-  end
-
-  defp resolve_calendar_sync(_session), do: WhereWeAre.CalendarSync
-
-  defp resolve_timezone(%{"tz" => tz}) when is_binary(tz) and tz != "" do
-    case DateTime.now(tz) do
-      {:ok, _} -> tz
-      _ -> "Etc/UTC"
-    end
-  end
-
-  defp resolve_timezone(_session), do: "Etc/UTC"
-
-  defp resolve_displayed_month(%{"month" => month_param}, today),
-    do: parse_month(month_param, today)
-
-  defp resolve_displayed_month(%{"today" => "true"}, today),
-    do: Date.beginning_of_month(today)
-
-  defp resolve_displayed_month(_params, today),
-    do: Date.beginning_of_month(today)
-
-  defp parse_month(month_param, today) do
-    case Date.from_iso8601(month_param) do
-      {:ok, date} -> Date.beginning_of_month(date)
-      _error -> Date.beginning_of_month(today)
-    end
-  end
-
   defp schedule_day_refresh(today, timezone) do
-    now = DateTime.now!(timezone)
-    tomorrow = Date.add(today, 1)
-
-    midnight =
-      case DateTime.new(tomorrow, ~T[00:00:00], timezone) do
-        {:ok, dt} -> dt
-        {:ambiguous, dt, _} -> dt
-        {:gap, _, dt} -> dt
-      end
-
-    ms = max(0, DateTime.diff(midnight, now, :millisecond))
-    Process.send_after(self(), :day_changed, ms)
+    Process.send_after(self(), :day_changed, Assigns.ms_until_midnight(today, timezone))
   end
 end
