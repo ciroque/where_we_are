@@ -3,6 +3,8 @@ defmodule WhereWeAre.CalendarSync.CaldavClient do
   Wrapper around CalDAVEx that handles authentication, calendar discovery, and event retrieval.
   """
 
+  @behaviour WhereWeAre.Calendar.Client
+
   alias WhereWeAre.Calendar.Event
 
   @base_url "https://caldav.icloud.com"
@@ -14,48 +16,36 @@ defmodule WhereWeAre.CalendarSync.CaldavClient do
     end
   end
 
-  def list_calendars(%{username: nil}), do: {:error, :missing_caldav_username}
-  def list_calendars(%{password: nil}), do: {:error, :missing_caldav_password}
-
-  def list_calendars(config) when not is_map_key(config, :username),
-    do: {:error, :missing_caldav_username}
-
-  def list_calendars(config) when not is_map_key(config, :password),
-    do: {:error, :missing_caldav_password}
-
+  @impl true
   def list_calendars(config) do
-    caldav_client = caldav_client(config)
-    client = client(config)
+    with :ok <- validate_config(config) do
+      caldav_client = caldav_client(config)
+      client = client(config)
 
-    with {:ok, discovery_info} <- client.discover(caldav_client),
-         {:ok, calendars} <- client.list_calendars(caldav_client, discovery_info) do
-      {:ok, filter_calendars(calendars, config)}
+      with {:ok, discovery_info} <- client.discover(caldav_client),
+           {:ok, calendars} <- client.list_calendars(caldav_client, discovery_info) do
+        {:ok, filter_calendars(calendars, config)}
+      end
     end
   end
 
-  def fetch_events(%{username: nil}), do: {:error, :missing_caldav_username}
-  def fetch_events(%{password: nil}), do: {:error, :missing_caldav_password}
-
-  def fetch_events(config) when not is_map_key(config, :username),
-    do: {:error, :missing_caldav_username}
-
-  def fetch_events(config) when not is_map_key(config, :password),
-    do: {:error, :missing_caldav_password}
-
+  @impl true
   def fetch_events(config) do
-    caldav_client = caldav_client(config)
-    client = client(config)
-    time_range_opts = build_time_range_opts(config)
+    with :ok <- validate_config(config) do
+      caldav_client = caldav_client(config)
+      client = client(config)
+      time_range_opts = build_time_range_opts(config)
 
-    with {:ok, discovery_info} <- client.discover(caldav_client),
-         {:ok, calendars} <- client.list_calendars(caldav_client, discovery_info) do
-      calendars
-      |> filter_calendars(config)
-      |> Enum.reduce_while(
-        {:ok, []},
-        &gather_events(&1, &2, client, caldav_client, time_range_opts)
-      )
-      |> finalize_event_accumulation()
+      with {:ok, discovery_info} <- client.discover(caldav_client),
+           {:ok, calendars} <- client.list_calendars(caldav_client, discovery_info) do
+        calendars
+        |> filter_calendars(config)
+        |> Enum.reduce_while(
+          {:ok, []},
+          &gather_events(&1, &2, client, caldav_client, time_range_opts)
+        )
+        |> finalize_event_accumulation()
+      end
     end
   end
 
@@ -70,15 +60,14 @@ defmodule WhereWeAre.CalendarSync.CaldavClient do
     |> CalDAVEx.new_client()
   end
 
-  defp validate_config(%{username: nil}), do: {:error, :missing_caldav_username}
-  defp validate_config(%{password: nil}), do: {:error, :missing_caldav_password}
-
   defp validate_config(config) when not is_map_key(config, :username),
     do: {:error, :missing_caldav_username}
 
   defp validate_config(config) when not is_map_key(config, :password),
     do: {:error, :missing_caldav_password}
 
+  defp validate_config(%{username: nil}), do: {:error, :missing_caldav_username}
+  defp validate_config(%{password: nil}), do: {:error, :missing_caldav_password}
   defp validate_config(_config), do: :ok
 
   defp filter_calendars(calendars, %{calendars: calendar_names})
