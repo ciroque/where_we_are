@@ -146,7 +146,7 @@ events_by_date =
     </div>
     <% {past_events, upcoming_events} =
       Enum.split_with(@events, fn event ->
-        Date.compare(WhereWeAreWeb.CalendarHelpers.local_date(event.dtstart, timezone), today) == :lt
+        Date.compare(WhereWeAreWeb.CalendarHelpers.event_end_date(event, timezone), today) == :lt
       end) %>
     <div class="mt-8">
       <%= if @events == [] do %>
