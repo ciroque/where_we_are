@@ -4,6 +4,8 @@ defmodule WhereWeAre.CalendarSync do
   """
   use GenServer
 
+  alias WhereWeAre.Calendar.Window
+
   @default_poll_interval :timer.minutes(10)
 
   defmodule NoopClient do
@@ -97,7 +99,7 @@ defmodule WhereWeAre.CalendarSync do
   end
 
   def handle_call({:events_for_month, month_start}, _from, state) do
-    events = WhereWeAre.Calendar.Window.events_for_month(state.events, month_start)
+    events = Window.events_for_month(state.events, month_start)
     {:reply, events, state}
   end
 
