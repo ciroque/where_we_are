@@ -35,6 +35,19 @@ defmodule WhereWeAre.CalendarSyncTest do
     def list_calendars(_config), do: {:error, :icloud_unavailable}
   end
 
+  defmodule CountingEmptyClient do
+    @behaviour WhereWeAre.Calendar.Client
+
+    @impl true
+    def fetch_events(_config), do: {:ok, []}
+
+    @impl true
+    def list_calendars(_config) do
+      Agent.update(:list_calendars_call_counter, &(&1 + 1))
+      {:ok, []}
+    end
+  end
+
   test "starts with configured client, poll interval, and credentials" do
     {:ok, pid} =
       start_supervised(
@@ -55,7 +68,7 @@ defmodule WhereWeAre.CalendarSyncTest do
              last_sync: nil,
              last_error: nil,
              events: [],
-             calendars: [],
+             calendars: nil,
              configured_calendars: []
            }
   end
@@ -76,9 +89,59 @@ defmodule WhereWeAre.CalendarSyncTest do
 
     assert %{
              events: [%Event{summary: "Family Dinner"}],
+             calendars: [],
              last_sync: %DateTime{},
              last_error: nil
            } = CalendarSync.state(pid)
+  end
+
+  test "list_calendars caches an empty fetched list and does not re-call the client" do
+    start_supervised!(
+      %{
+        id: :list_calendars_call_counter,
+        start: {Agent, :start_link, [fn -> 0 end, [name: :list_calendars_call_counter]]}
+      }
+    )
+
+    {:ok, pid} =
+      start_supervised(
+        {CalendarSync,
+         name: :calendar_sync_empty_cache_test,
+         client: CountingEmptyClient,
+         schedule?: false}
+      )
+
+    assert {:ok, []} = CalendarSync.list_calendars(pid)
+    assert Agent.get(:list_calendars_call_counter, & &1) == 1
+
+    assert {:ok, []} = CalendarSync.list_calendars(pid)
+    assert Agent.get(:list_calendars_call_counter, & &1) == 1
+
+    assert %{calendars: []} = CalendarSync.state(pid)
+  end
+
+  test "sync_now only loads calendars once when the cache is empty/nil" do
+    start_supervised!(
+      %{
+        id: :list_calendars_call_counter,
+        start: {Agent, :start_link, [fn -> 0 end, [name: :list_calendars_call_counter]]}
+      }
+    )
+
+    {:ok, pid} =
+      start_supervised(
+        {CalendarSync,
+         name: :calendar_sync_sync_cache_test,
+         client: CountingEmptyClient,
+         schedule?: false}
+      )
+
+    assert {:ok, []} = CalendarSync.sync_now(pid)
+    assert Agent.get(:list_calendars_call_counter, & &1) == 1
+    assert %{calendars: []} = CalendarSync.state(pid)
+
+    assert {:ok, []} = CalendarSync.sync_now(pid)
+    assert Agent.get(:list_calendars_call_counter, & &1) == 1
   end
 
   test "sync_now keeps current events and records the error when fetch fails" do

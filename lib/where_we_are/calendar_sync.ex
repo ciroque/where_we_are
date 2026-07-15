@@ -66,16 +66,19 @@ defmodule WhereWeAre.CalendarSync do
   end
 
   def handle_call(:list_calendars, _from, store) do
-    reply =
-      case store.calendars do
-        calendars when is_list(calendars) and calendars != [] ->
-          {:ok, calendars}
+    case store.calendars do
+      calendars when is_list(calendars) ->
+        {:reply, {:ok, calendars}, store}
 
-        _ ->
-          store.client.list_calendars(store.credentials)
-      end
+      nil ->
+        case store.client.list_calendars(store.credentials) do
+          {:ok, calendars} when is_list(calendars) ->
+            {:reply, {:ok, calendars}, %{store | calendars: calendars}}
 
-    {:reply, reply, store}
+          other ->
+            {:reply, other, store}
+        end
+    end
   end
 
   def handle_call(:configured_calendars, _from, store) do
@@ -84,12 +87,6 @@ defmodule WhereWeAre.CalendarSync do
 
   def handle_call({:events_for_month, month_start, timezone}, _from, store) do
     {:reply, Store.events_for_month(store, month_start, timezone), store}
-  end
-
-  if Mix.env() == :test do
-    def handle_call({:set_events, events}, _from, store) when is_list(events) do
-      {:reply, :ok, %{store | events: events}}
-    end
   end
 
   @impl true
@@ -108,19 +105,28 @@ defmodule WhereWeAre.CalendarSync do
 
     case store.client.fetch_events(config) do
       {:ok, events} ->
-        calendars =
-          case store.client.list_calendars(store.credentials) do
-            {:ok, list} when is_list(list) -> list
-            _ -> store.calendars
-          end
+        store =
+          store
+          |> maybe_load_calendars()
+          |> Store.put_events(events)
 
-        store = Store.put_events(store, events, calendars: calendars)
         Phoenix.PubSub.broadcast(WhereWeAre.PubSub, topic(store.name), :events_updated)
         {{:ok, events}, store}
 
       {:error, reason} ->
         store = Store.put_error(store, reason)
         {{:error, reason}, store}
+    end
+  end
+
+  # Only hit the remote list_calendars endpoint when we have not fetched yet.
+  # Cached lists (including empty) are kept until process restart / explicit refresh.
+  defp maybe_load_calendars(%{calendars: calendars} = store) when is_list(calendars), do: store
+
+  defp maybe_load_calendars(store) do
+    case store.client.list_calendars(store.credentials) do
+      {:ok, list} when is_list(list) -> %{store | calendars: list}
+      _ -> store
     end
   end
 end

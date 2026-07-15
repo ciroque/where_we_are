@@ -18,7 +18,8 @@ defmodule WhereWeAre.CalendarSync.Store do
             last_sync: nil,
             last_error: nil,
             events: [],
-            calendars: [],
+            # nil = not yet fetched; [] = fetched and empty
+            calendars: nil,
             schedule?: true
 
   @type t :: %__MODULE__{}
@@ -32,7 +33,7 @@ defmodule WhereWeAre.CalendarSync.Store do
       expand_recurrences: Keyword.get(opts, :expand_recurrences, true),
       credentials: Keyword.get(opts, :credentials, %{}),
       events: Keyword.get(opts, :initial_events, []),
-      calendars: Keyword.get(opts, :initial_calendars, []),
+      calendars: Keyword.get(opts, :initial_calendars, nil),
       schedule?: Keyword.get(opts, :schedule?, true)
     }
   end
