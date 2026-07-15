@@ -72,4 +72,16 @@ defmodule WhereWeAreWeb.Calendar.AssignsTest do
              "FromEvent"
            ]
   end
+
+  test "resolve_calendar_sync returns the named CalendarSync when it is running" do
+    start_supervised!({WhereWeAre.CalendarSync, name: :calendar_sync_test, schedule?: false})
+
+    assert Assigns.resolve_calendar_sync(%{"calendar_sync" => "calendar_sync_test"}) ==
+             :calendar_sync_test
+  end
+
+  test "resolve_calendar_sync falls back for unknown names" do
+    assert Assigns.resolve_calendar_sync(%{"calendar_sync" => "definitely_not_an_existing_atom"}) ==
+             WhereWeAre.CalendarSync
+  end
 end
