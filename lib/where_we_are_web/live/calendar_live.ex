@@ -261,6 +261,13 @@ defmodule WhereWeAreWeb.CalendarLive do
     WhereWeAre.CalendarSync.configured_calendars(calendar_sync)
   end
 
+  defp sync_last_error(calendar_sync) do
+    case WhereWeAre.CalendarSync.state(calendar_sync) do
+      %{last_error: last_error} -> last_error
+      _ -> nil
+    end
+  end
+
   defp derive_known_calendars(events) do
     events
     |> Enum.map(& &1.calendar_name)
