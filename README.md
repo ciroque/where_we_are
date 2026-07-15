@@ -34,7 +34,7 @@ Runtime options are loaded from the environment (`config/runtime.exs` via
 | `CALDAV_EXPAND_RECURRENCES` | Expand recurring events at fetch | `true` |
 | `CALDAV_POLL_MINUTES` | Sync poll interval | `10` |
 | `SECRET_KEY_BASE` | Phoenix secret (required in prod) | — |
-| `PHX_HOST` / `PORT` | Production endpoint host/port | — |
+| `PHX_HOST` / `PORT` | Production endpoint host/port | `example.com` / `4000` |
 | `PHX_SERVER` | Set `true` for releases that should listen | — |
 
 ## Architecture
