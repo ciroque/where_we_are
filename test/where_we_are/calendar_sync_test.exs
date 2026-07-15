@@ -96,12 +96,7 @@ defmodule WhereWeAre.CalendarSyncTest do
   end
 
   test "list_calendars caches an empty fetched list and does not re-call the client" do
-    start_supervised!(
-      %{
-        id: :list_calendars_call_counter,
-        start: {Agent, :start_link, [fn -> 0 end, [name: :list_calendars_call_counter]]}
-      }
-    )
+    counter = start_supervised!({Agent, fn -> 0 end})
 
     {:ok, pid} =
       start_supervised(
