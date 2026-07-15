@@ -42,8 +42,12 @@ defmodule WhereWeAre.CalendarSyncTest do
     def fetch_events(_config), do: {:ok, []}
 
     @impl true
-    def list_calendars(_config) do
-      Agent.update(:list_calendars_call_counter, &(&1 + 1))
+    def list_calendars(config) do
+      case config do
+        %{counter: counter} -> Agent.update(counter, &(&1 + 1))
+        _ -> :ok
+      end
+
       {:ok, []}
     end
   end
