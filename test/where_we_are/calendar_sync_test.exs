@@ -133,6 +133,7 @@ defmodule WhereWeAre.CalendarSyncTest do
         {CalendarSync,
          name: :calendar_sync_sync_cache_test,
          client: CountingEmptyClient,
+         credentials: %{counter: counter},
          schedule?: false}
       )
 
