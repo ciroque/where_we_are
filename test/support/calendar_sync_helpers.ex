@@ -9,7 +9,7 @@ defmodule WhereWeAre.CalendarSyncHelpers do
   Prefer this over shipping a compile-time `Mix.env() == :test` GenServer API.
   """
   def put_events(server, events) when is_list(events) do
-    :sys.replace_state(server, fn store ->
+    :sys.replace_state(server, fn %Store{} = store ->
       %{store | events: events}
     end)
 
