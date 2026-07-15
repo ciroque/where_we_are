@@ -121,12 +121,7 @@ defmodule WhereWeAre.CalendarSyncTest do
   end
 
   test "sync_now only loads calendars once when the cache is empty/nil" do
-    start_supervised!(
-      %{
-        id: :list_calendars_call_counter,
-        start: {Agent, :start_link, [fn -> 0 end, [name: :list_calendars_call_counter]]}
-      }
-    )
+    counter = start_supervised!({Agent, fn -> 0 end})
 
     {:ok, pid} =
       start_supervised(
