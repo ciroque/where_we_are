@@ -1,26 +1,42 @@
 defmodule WhereWeAre.CalendarSync.Config do
   @moduledoc """
-  Builds a keyword list of CalendarSync options from environment variables.
+  Builds CalendarSync options from environment variables.
+
+  Internal option shape separates auth, server, filter, and sync settings while
+  keeping the public env var names stable.
   """
   def from_env do
-    url = System.get_env("CALDAV_URL")
-    calendars = parse_calendars(System.get_env("CALDAV_CALENDARS"))
-
-    credentials =
-      %{
-        username: System.get_env("CALDAV_USERNAME"),
-        password: System.get_env("CALDAV_PASSWORD")
-      }
-      |> maybe_put(:url, normalize_presence(url))
-      |> maybe_put(:calendars, calendars)
-
     [
       client: WhereWeAre.CalendarSync.CaldavClient,
-      poll_interval: :timer.minutes(10),
+      poll_interval: poll_interval_from_env(),
       event_window_months: parse_integer(System.get_env("CALDAV_EVENT_WINDOW_MONTHS"), 6),
       expand_recurrences: parse_boolean(System.get_env("CALDAV_EXPAND_RECURRENCES"), true),
-      credentials: credentials
+      auth: %{
+        username: System.get_env("CALDAV_USERNAME"),
+        password: System.get_env("CALDAV_PASSWORD")
+      },
+      server: server_from_env(),
+      filter: filter_from_env()
     ]
+  end
+
+  defp poll_interval_from_env do
+    minutes = parse_integer(System.get_env("CALDAV_POLL_MINUTES"), 10)
+    :timer.minutes(max(minutes, 1))
+  end
+
+  defp server_from_env do
+    case normalize_presence(System.get_env("CALDAV_URL")) do
+      nil -> %{}
+      url -> %{url: url}
+    end
+  end
+
+  defp filter_from_env do
+    case parse_calendars(System.get_env("CALDAV_CALENDARS")) do
+      nil -> %{}
+      calendars -> %{calendars: calendars}
+    end
   end
 
   defp parse_calendars(nil), do: nil
@@ -49,9 +65,6 @@ defmodule WhereWeAre.CalendarSync.Config do
   defp parse_boolean(value, _default) when value in ["true", "1"], do: true
   defp parse_boolean(value, _default) when value in ["false", "0"], do: false
   defp parse_boolean(_value, default), do: default
-
-  defp maybe_put(map, _key, nil), do: map
-  defp maybe_put(map, key, value), do: Map.put(map, key, value)
 
   defp normalize_presence(nil), do: nil
 

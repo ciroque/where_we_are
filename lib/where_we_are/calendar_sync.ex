@@ -71,7 +71,7 @@ defmodule WhereWeAre.CalendarSync do
         {:reply, {:ok, calendars}, store}
 
       nil ->
-        case store.client.list_calendars(store.credentials) do
+        case store.client.list_calendars(Store.client_config(store)) do
           {:ok, calendars} when is_list(calendars) ->
             {:reply, {:ok, calendars}, %{store | calendars: calendars}}
 
@@ -115,6 +115,8 @@ defmodule WhereWeAre.CalendarSync do
 
       {:error, reason} ->
         store = Store.put_error(store, reason)
+        # Surface sync failures to LiveView subscribers (same topic as successes).
+        Phoenix.PubSub.broadcast(WhereWeAre.PubSub, topic(store.name), :events_updated)
         {{:error, reason}, store}
     end
   end
@@ -124,7 +126,7 @@ defmodule WhereWeAre.CalendarSync do
   defp maybe_load_calendars(%{calendars: calendars} = store) when is_list(calendars), do: store
 
   defp maybe_load_calendars(store) do
-    case store.client.list_calendars(store.credentials) do
+    case store.client.list_calendars(Store.client_config(store)) do
       {:ok, list} when is_list(list) -> %{store | calendars: list}
       _ -> store
     end
