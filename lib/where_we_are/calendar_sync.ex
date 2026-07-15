@@ -4,20 +4,7 @@ defmodule WhereWeAre.CalendarSync do
   """
   use GenServer
 
-  alias WhereWeAre.Calendar.Window
-
-  @default_poll_interval :timer.minutes(10)
-
-  defstruct client: nil,
-            name: nil,
-            poll_interval: @default_poll_interval,
-            event_window_months: 6,
-            expand_recurrences: true,
-            credentials: %{},
-            last_sync: nil,
-            last_error: nil,
-            events: [],
-            schedule?: true
+  alias WhereWeAre.CalendarSync.Store
 
   def start_link(opts) do
     name = Keyword.get(opts, :name, __MODULE__)
@@ -41,6 +28,10 @@ defmodule WhereWeAre.CalendarSync do
     GenServer.call(server, :list_calendars)
   end
 
+  def configured_calendars(server \\ __MODULE__) do
+    GenServer.call(server, :configured_calendars)
+  end
+
   def events_for_month(month_start) do
     events_for_month(__MODULE__, month_start, "Etc/UTC")
   end
@@ -55,89 +46,87 @@ defmodule WhereWeAre.CalendarSync do
 
   @impl true
   def init(opts) do
-    state = %__MODULE__{
-      client: Keyword.get(opts, :client, WhereWeAre.Calendar.NoopClient),
-      name: Keyword.get(opts, :name, __MODULE__),
-      poll_interval: Keyword.get(opts, :poll_interval, @default_poll_interval),
-      event_window_months: Keyword.get(opts, :event_window_months, 6),
-      expand_recurrences: Keyword.get(opts, :expand_recurrences, true),
-      credentials: Keyword.get(opts, :credentials, %{}),
-      events: Keyword.get(opts, :initial_events, []),
-      schedule?: Keyword.get(opts, :schedule?, true)
-    }
+    store = Store.new(opts)
 
-    if state.schedule? do
+    if store.schedule? do
       Process.send_after(self(), :sync, 0)
     end
 
-    {:ok, state}
+    {:ok, store}
   end
 
   @impl true
-  def handle_call(:sync_now, _from, state) do
-    {reply, state} = sync(state)
-    {:reply, reply, state}
+  def handle_call(:sync_now, _from, store) do
+    {reply, store} = sync(store)
+    {:reply, reply, store}
   end
 
-  def handle_call(:state, _from, state) do
-    {:reply, public_state(state), state}
+  def handle_call(:state, _from, store) do
+    {:reply, Store.public_status(store), store}
   end
 
-  def handle_call(:list_calendars, _from, state) do
-    reply = state.client.list_calendars(state.credentials)
-    {:reply, reply, state}
-  end
+  def handle_call(:list_calendars, _from, store) do
+    case store.calendars do
+      calendars when is_list(calendars) ->
+        {:reply, {:ok, calendars}, store}
 
-  if Mix.env() == :test do
-    def handle_call({:set_events, events}, _from, state) when is_list(events) do
-      {:reply, :ok, %{state | events: events}}
+      nil ->
+        case store.client.list_calendars(store.credentials) do
+          {:ok, calendars} when is_list(calendars) ->
+            {:reply, {:ok, calendars}, %{store | calendars: calendars}}
+
+          other ->
+            {:reply, other, store}
+        end
     end
   end
 
-  def handle_call({:events_for_month, month_start, timezone}, _from, state) do
-    events = Window.events_for_month(state.events, month_start, timezone)
-    {:reply, events, state}
+  def handle_call(:configured_calendars, _from, store) do
+    {:reply, Store.configured_calendars(store), store}
+  end
+
+  def handle_call({:events_for_month, month_start, timezone}, _from, store) do
+    {:reply, Store.events_for_month(store, month_start, timezone), store}
   end
 
   @impl true
-  def handle_info(:sync, state) do
-    {_reply, state} = sync(state)
+  def handle_info(:sync, store) do
+    {_reply, store} = sync(store)
 
-    if state.schedule? do
-      Process.send_after(self(), :sync, state.poll_interval)
+    if store.schedule? do
+      Process.send_after(self(), :sync, store.poll_interval)
     end
 
-    {:noreply, state}
+    {:noreply, store}
   end
 
-  defp sync(state) do
-    config =
-      state.credentials
-      |> Map.put(:event_window_months, state.event_window_months)
-      |> Map.put(:expand_recurrences, state.expand_recurrences)
+  defp sync(store) do
+    config = Store.client_config(store)
 
-    case state.client.fetch_events(config) do
+    case store.client.fetch_events(config) do
       {:ok, events} ->
-        state = %{state | events: events, last_sync: DateTime.utc_now(), last_error: nil}
-        Phoenix.PubSub.broadcast(WhereWeAre.PubSub, topic(state.name), :events_updated)
-        {{:ok, events}, state}
+        store =
+          store
+          |> maybe_load_calendars()
+          |> Store.put_events(events)
+
+        Phoenix.PubSub.broadcast(WhereWeAre.PubSub, topic(store.name), :events_updated)
+        {{:ok, events}, store}
 
       {:error, reason} ->
-        state = %{state | last_error: reason}
-        {{:error, reason}, state}
+        store = Store.put_error(store, reason)
+        {{:error, reason}, store}
     end
   end
 
-  defp public_state(state) do
-    %{
-      client: state.client,
-      poll_interval: state.poll_interval,
-      event_window_months: state.event_window_months,
-      expand_recurrences: state.expand_recurrences,
-      credentials: state.credentials,
-      last_sync: state.last_sync,
-      last_error: state.last_error,
-      events: state.events
-    }
+  # Only hit the remote list_calendars endpoint when we have not fetched yet.
+  # Cached lists (including empty) are kept until process restart / explicit refresh.
+  defp maybe_load_calendars(%{calendars: calendars} = store) when is_list(calendars), do: store
+
+  defp maybe_load_calendars(store) do
+    case store.client.list_calendars(store.credentials) do
+      {:ok, list} when is_list(list) -> %{store | calendars: list}
+      _ -> store
+    end
   end
 end

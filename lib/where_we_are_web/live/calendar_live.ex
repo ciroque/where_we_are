@@ -246,10 +246,7 @@ defmodule WhereWeAreWeb.CalendarLive do
   end
 
   defp configured_calendars(calendar_sync) do
-    case WhereWeAre.CalendarSync.state(calendar_sync) do
-      %{credentials: %{calendars: calendars}} when is_list(calendars) -> calendars
-      _ -> []
-    end
+    WhereWeAre.CalendarSync.configured_calendars(calendar_sync)
   end
 
   defp derive_known_calendars(events) do

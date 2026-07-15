@@ -35,6 +35,23 @@ defmodule WhereWeAre.CalendarSyncTest do
     def list_calendars(_config), do: {:error, :icloud_unavailable}
   end
 
+  defmodule CountingEmptyClient do
+    @behaviour WhereWeAre.Calendar.Client
+
+    @impl true
+    def fetch_events(_config), do: {:ok, []}
+
+    @impl true
+    def list_calendars(config) do
+      case config do
+        %{counter: counter} -> Agent.update(counter, &(&1 + 1))
+        _ -> :ok
+      end
+
+      {:ok, []}
+    end
+  end
+
   test "starts with configured client, poll interval, and credentials" do
     {:ok, pid} =
       start_supervised(
@@ -51,10 +68,12 @@ defmodule WhereWeAre.CalendarSyncTest do
              poll_interval: :timer.minutes(10),
              event_window_months: 6,
              expand_recurrences: true,
-             credentials: %{username: "person@example.com", password: "app-specific-password"},
+             credentials: %{username: "person@example.com", password: :redacted},
              last_sync: nil,
              last_error: nil,
-             events: []
+             events: [],
+             calendars: nil,
+             configured_calendars: []
            }
   end
 
@@ -74,9 +93,51 @@ defmodule WhereWeAre.CalendarSyncTest do
 
     assert %{
              events: [%Event{summary: "Family Dinner"}],
+             calendars: [],
              last_sync: %DateTime{},
              last_error: nil
            } = CalendarSync.state(pid)
+  end
+
+  test "list_calendars caches an empty fetched list and does not re-call the client" do
+    counter = start_supervised!({Agent, fn -> 0 end})
+
+    {:ok, pid} =
+      start_supervised(
+        {CalendarSync,
+         name: :calendar_sync_empty_cache_test,
+         client: CountingEmptyClient,
+         credentials: %{counter: counter},
+         schedule?: false}
+      )
+
+    assert {:ok, []} = CalendarSync.list_calendars(pid)
+    assert Agent.get(counter, & &1) == 1
+
+    assert {:ok, []} = CalendarSync.list_calendars(pid)
+    assert Agent.get(counter, & &1) == 1
+
+    assert %{calendars: []} = CalendarSync.state(pid)
+  end
+
+  test "sync_now only loads calendars once when the cache is empty/nil" do
+    counter = start_supervised!({Agent, fn -> 0 end})
+
+    {:ok, pid} =
+      start_supervised(
+        {CalendarSync,
+         name: :calendar_sync_sync_cache_test,
+         client: CountingEmptyClient,
+         credentials: %{counter: counter},
+         schedule?: false}
+      )
+
+    assert {:ok, []} = CalendarSync.sync_now(pid)
+    assert Agent.get(counter, & &1) == 1
+    assert %{calendars: []} = CalendarSync.state(pid)
+
+    assert {:ok, []} = CalendarSync.sync_now(pid)
+    assert Agent.get(counter, & &1) == 1
   end
 
   test "sync_now keeps current events and records the error when fetch fails" do
