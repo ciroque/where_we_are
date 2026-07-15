@@ -601,13 +601,13 @@ Implemented and merged; originally developed as a local stacked branch tip at `c
 | `refactor/event-struct` | Event struct | Done |
 | `refactor/client-behaviour` | Client behaviour | Done |
 | `refactor/sync-pure` | Pure Store + redaction | Done |
-| `refactor/web-components` | Components; `/static` → redirect | Done |
+| `refactor/web-components` | Components; `/static` removed | Done |
 | `refactor/liveview-slim` | Assigns + slim LiveView | Done |
 | `refactor/sync-api-hygiene` | Config split, poll env, error UI | Done |
 | `chore/docs-cleanup` | README + docs | Done |
 
 Deviations from the original plan:
 
-- `/static` is retained as a **redirect** to `/` (not fully deleted) for bookmarks.
+- `/static`, `PageController`, and `PageHTML` are **removed** (any mentions above refer to the pre-refactor plan); LiveView is the only UI.
 - Sync error UI was wired with the component work and finished in the hygiene phase.
 - Calendar catalog caching is best-effort after each successful sync; LiveView still falls back to client/list/events as before.
