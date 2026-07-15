@@ -608,6 +608,6 @@ Implemented and merged; originally developed as a local stacked branch tip at `c
 
 Deviations from the original plan:
 
-- `/static`, `PageController`, and `PageHTML` are **removed**; LiveView is the only UI.
+- `/static`, `PageController`, and `PageHTML` are **removed** (any mentions above refer to the pre-refactor plan); LiveView is the only UI.
 - Sync error UI was wired with the component work and finished in the hygiene phase.
 - Calendar catalog caching is best-effort after each successful sync; LiveView still falls back to client/list/events as before.
