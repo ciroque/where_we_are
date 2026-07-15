@@ -18,8 +18,6 @@ defmodule WhereWeAreWeb.Router do
   scope "/", WhereWeAreWeb do
     pipe_through :browser
 
-    get "/static", PageController, :home
-
     live_session :default, session: {WhereWeAreWeb.CalendarLive, :session, []} do
       live "/", CalendarLive
     end
