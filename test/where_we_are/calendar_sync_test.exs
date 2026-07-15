@@ -1,16 +1,19 @@
 defmodule WhereWeAre.CalendarSyncTest do
   use ExUnit.Case, async: true
 
+  alias WhereWeAre.Calendar.Event
   alias WhereWeAre.CalendarSync
 
   defmodule SuccessfulClient do
     @behaviour WhereWeAre.Calendar.Client
 
+    alias WhereWeAre.Calendar.Event
+
     @impl true
     def fetch_events(_config) do
       {:ok,
        [
-         WhereWeAre.Calendar.Event.new(%{
+         Event.new(%{
            uid: "family-dinner",
            summary: "Family Dinner",
            dtstart: ~D[2024-01-15]
@@ -30,6 +33,23 @@ defmodule WhereWeAre.CalendarSyncTest do
 
     @impl true
     def list_calendars(_config), do: {:error, :icloud_unavailable}
+  end
+
+  defmodule CountingEmptyClient do
+    @behaviour WhereWeAre.Calendar.Client
+
+    @impl true
+    def fetch_events(_config), do: {:ok, []}
+
+    @impl true
+    def list_calendars(config) do
+      case config do
+        %{counter: counter} -> Agent.update(counter, &(&1 + 1))
+        _ -> :ok
+      end
+
+      {:ok, []}
+    end
   end
 
   test "starts with configured client, poll interval, and credentials" do
@@ -52,7 +72,7 @@ defmodule WhereWeAre.CalendarSyncTest do
              last_sync: nil,
              last_error: nil,
              events: [],
-             calendars: [],
+             calendars: nil,
              configured_calendars: []
            }
   end
@@ -68,19 +88,61 @@ defmodule WhereWeAre.CalendarSyncTest do
          schedule?: false}
       )
 
-    assert {:ok, [%WhereWeAre.Calendar.Event{summary: "Family Dinner"}]} =
+    assert {:ok, [%Event{summary: "Family Dinner"}]} =
              CalendarSync.sync_now(pid)
 
     assert %{
-             events: [%WhereWeAre.Calendar.Event{summary: "Family Dinner"}],
+             events: [%Event{summary: "Family Dinner"}],
+             calendars: [],
              last_sync: %DateTime{},
              last_error: nil
            } = CalendarSync.state(pid)
   end
 
+  test "list_calendars caches an empty fetched list and does not re-call the client" do
+    counter = start_supervised!({Agent, fn -> 0 end})
+
+    {:ok, pid} =
+      start_supervised(
+        {CalendarSync,
+         name: :calendar_sync_empty_cache_test,
+         client: CountingEmptyClient,
+         credentials: %{counter: counter},
+         schedule?: false}
+      )
+
+    assert {:ok, []} = CalendarSync.list_calendars(pid)
+    assert Agent.get(counter, & &1) == 1
+
+    assert {:ok, []} = CalendarSync.list_calendars(pid)
+    assert Agent.get(counter, & &1) == 1
+
+    assert %{calendars: []} = CalendarSync.state(pid)
+  end
+
+  test "sync_now only loads calendars once when the cache is empty/nil" do
+    counter = start_supervised!({Agent, fn -> 0 end})
+
+    {:ok, pid} =
+      start_supervised(
+        {CalendarSync,
+         name: :calendar_sync_sync_cache_test,
+         client: CountingEmptyClient,
+         credentials: %{counter: counter},
+         schedule?: false}
+      )
+
+    assert {:ok, []} = CalendarSync.sync_now(pid)
+    assert Agent.get(counter, & &1) == 1
+    assert %{calendars: []} = CalendarSync.state(pid)
+
+    assert {:ok, []} = CalendarSync.sync_now(pid)
+    assert Agent.get(counter, & &1) == 1
+  end
+
   test "sync_now keeps current events and records the error when fetch fails" do
     existing =
-      WhereWeAre.Calendar.Event.new(%{
+      Event.new(%{
         uid: "existing",
         summary: "Existing Event",
         dtstart: ~D[2024-01-01]
@@ -100,7 +162,7 @@ defmodule WhereWeAre.CalendarSyncTest do
     assert {:error, :icloud_unavailable} = CalendarSync.sync_now(pid)
 
     assert %{
-             events: [%WhereWeAre.Calendar.Event{summary: "Existing Event"}],
+             events: [%Event{summary: "Existing Event"}],
              last_error: :icloud_unavailable,
              last_sync: nil
            } = CalendarSync.state(pid)
