@@ -109,6 +109,7 @@ defmodule WhereWeAre.CalendarSyncTest do
          client: CountingEmptyClient,
          credentials: %{counter: counter},
          schedule?: false}
+      )
 
     assert {:ok, []} = CalendarSync.list_calendars(pid)
     assert Agent.get(counter, & &1) == 1
@@ -132,11 +133,11 @@ defmodule WhereWeAre.CalendarSyncTest do
       )
 
     assert {:ok, []} = CalendarSync.sync_now(pid)
-    assert Agent.get(:list_calendars_call_counter, & &1) == 1
+    assert Agent.get(counter, & &1) == 1
     assert %{calendars: []} = CalendarSync.state(pid)
 
     assert {:ok, []} = CalendarSync.sync_now(pid)
-    assert Agent.get(:list_calendars_call_counter, & &1) == 1
+    assert Agent.get(counter, & &1) == 1
   end
 
   test "sync_now keeps current events and records the error when fetch fails" do
