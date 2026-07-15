@@ -108,8 +108,8 @@ defmodule WhereWeAre.CalendarSyncTest do
         {CalendarSync,
          name: :calendar_sync_empty_cache_test,
          client: CountingEmptyClient,
+         credentials: %{counter: counter},
          schedule?: false}
-      )
 
     assert {:ok, []} = CalendarSync.list_calendars(pid)
     assert Agent.get(counter, & &1) == 1
