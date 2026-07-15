@@ -57,4 +57,19 @@ defmodule WhereWeAreWeb.Calendar.AssignsTest do
              []
            ) == ["Server"]
   end
+
+  test "known_calendars only invokes configured fun on error path" do
+    events = [
+      Event.new(%{uid: "1", summary: "A", dtstart: ~D[2024-01-01], calendar_name: "FromEvent"})
+    ]
+
+    assert Assigns.known_calendars({:ok, []}, events, fn ->
+             flunk("configured fun should not run on {:ok, _}")
+           end) == ["FromEvent"]
+
+    assert Assigns.known_calendars({:error, :down}, events, fn -> ["Configured"] end) == [
+             "Configured",
+             "FromEvent"
+           ]
+  end
 end

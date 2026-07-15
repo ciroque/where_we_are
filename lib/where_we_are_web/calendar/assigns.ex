@@ -66,7 +66,14 @@ defmodule WhereWeAreWeb.Calendar.Assigns do
       else: MapSet.put(selected, name)
   end
 
-  def known_calendars(calendars_result, all_events, configured_calendars) do
+  @doc """
+  Resolve known calendar names from a list_calendars result.
+
+  `configured` may be a list or a zero-arity function that returns a list.
+  The function form is only invoked on the `{:error, _}` path so callers can
+  avoid a GenServer round-trip when the server list is available.
+  """
+  def known_calendars(calendars_result, all_events, configured) do
     names =
       case calendars_result do
         {:ok, calendars} when is_list(calendars) and calendars != [] ->
@@ -76,7 +83,7 @@ defmodule WhereWeAreWeb.Calendar.Assigns do
           derive_known_calendars(all_events)
 
         {:error, _reason} ->
-          configured_calendars ++ derive_known_calendars(all_events)
+          resolve_configured(configured) ++ derive_known_calendars(all_events)
       end
 
     names
@@ -84,6 +91,9 @@ defmodule WhereWeAreWeb.Calendar.Assigns do
     |> Enum.uniq()
     |> Enum.sort()
   end
+
+  defp resolve_configured(fun) when is_function(fun, 0), do: fun.()
+  defp resolve_configured(list) when is_list(list), do: list
 
   def calendar_colors(calendars_result, all_events) do
     server_colors =
@@ -138,11 +148,9 @@ defmodule WhereWeAreWeb.Calendar.Assigns do
   end
 
   defp calendar_sync_pid?(pid) do
-    try do
-      match?(%WhereWeAre.CalendarSync.Store{}, :sys.get_state(pid))
-    catch
-      _, _ -> false
-    end
+    match?(%WhereWeAre.CalendarSync.Store{}, :sys.get_state(pid))
+  catch
+    _, _ -> false
   end
 
   def ms_until_midnight(today, timezone) do

@@ -189,12 +189,13 @@ defmodule WhereWeAreWeb.CalendarLive do
 
   defp load_calendar_meta(calendar_sync, all_events) do
     calendars_result = CalendarSync.list_calendars(calendar_sync)
-    configured = CalendarSync.configured_calendars(calendar_sync)
 
-    {
-      Assigns.known_calendars(calendars_result, all_events, configured),
-      Assigns.calendar_colors(calendars_result, all_events)
-    }
+    known =
+      Assigns.known_calendars(calendars_result, all_events, fn ->
+        CalendarSync.configured_calendars(calendar_sync)
+      end)
+
+    {known, Assigns.calendar_colors(calendars_result, all_events)}
   end
 
   defp sync_last_error(calendar_sync) do
