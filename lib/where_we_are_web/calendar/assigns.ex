@@ -1,6 +1,6 @@
 defmodule WhereWeAreWeb.Calendar.Assigns do
   @moduledoc """
-  Pure builders for CalendarLive assigns.
+  Helpers for building CalendarLive assigns from params/session.
   """
 
   def resolve_timezone(%{"tz" => tz}) when is_binary(tz) and tz != "" do
