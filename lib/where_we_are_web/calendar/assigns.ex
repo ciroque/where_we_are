@@ -1,6 +1,6 @@
 defmodule WhereWeAreWeb.Calendar.Assigns do
   @moduledoc """
-  Pure builders for CalendarLive assigns.
+  Helpers for building CalendarLive assigns from params/session.
   """
 
   def resolve_timezone(%{"tz" => tz}) when is_binary(tz) and tz != "" do
@@ -21,12 +21,14 @@ defmodule WhereWeAreWeb.Calendar.Assigns do
   def resolve_displayed_month(_params, today),
     do: Date.beginning_of_month(today)
 
-  def parse_month(month_param, today) do
+  def parse_month(month_param, today) when is_binary(month_param) do
     case Date.from_iso8601(month_param) do
       {:ok, date} -> Date.beginning_of_month(date)
       _error -> Date.beginning_of_month(today)
     end
   end
+
+  def parse_month(_month_param, today), do: Date.beginning_of_month(today)
 
   def resolve_selected_calendars(%{"selected_calendars" => saved}, known_calendars)
       when is_binary(saved) and saved != "" do
@@ -64,7 +66,14 @@ defmodule WhereWeAreWeb.Calendar.Assigns do
       else: MapSet.put(selected, name)
   end
 
-  def known_calendars(calendars_result, all_events, configured_calendars) do
+  @doc """
+  Resolve known calendar names from a list_calendars result.
+
+  `configured` may be a list or a zero-arity function that returns a list.
+  The function form is only invoked on the `{:error, _}` path so callers can
+  avoid a GenServer round-trip when the server list is available.
+  """
+  def known_calendars(calendars_result, all_events, configured) do
     names =
       case calendars_result do
         {:ok, calendars} when is_list(calendars) and calendars != [] ->
@@ -74,7 +83,7 @@ defmodule WhereWeAreWeb.Calendar.Assigns do
           derive_known_calendars(all_events)
 
         {:error, _reason} ->
-          configured_calendars ++ derive_known_calendars(all_events)
+          resolve_configured(configured) ++ derive_known_calendars(all_events)
       end
 
     names
@@ -82,6 +91,9 @@ defmodule WhereWeAreWeb.Calendar.Assigns do
     |> Enum.uniq()
     |> Enum.sort()
   end
+
+  defp resolve_configured(fun) when is_function(fun, 0), do: fun.()
+  defp resolve_configured(list) when is_list(list), do: list
 
   def calendar_colors(calendars_result, all_events) do
     server_colors =
@@ -118,17 +130,28 @@ defmodule WhereWeAreWeb.Calendar.Assigns do
   end
 
   def resolve_calendar_sync(%{"calendar_sync" => name}) when is_binary(name) do
-    atom = String.to_existing_atom(name)
-
-    case Process.whereis(atom) do
-      nil -> WhereWeAre.CalendarSync
-      _pid -> atom
+    with atom when is_atom(atom) <- safe_existing_atom(name),
+         pid when is_pid(pid) <- Process.whereis(atom),
+         true <- calendar_sync_pid?(pid) do
+      atom
+    else
+      _ -> WhereWeAre.CalendarSync
     end
-  rescue
-    ArgumentError -> WhereWeAre.CalendarSync
   end
 
   def resolve_calendar_sync(_session), do: WhereWeAre.CalendarSync
+
+  defp safe_existing_atom(name) do
+    String.to_existing_atom(name)
+  rescue
+    ArgumentError -> nil
+  end
+
+  defp calendar_sync_pid?(pid) do
+    match?(%WhereWeAre.CalendarSync.Store{}, :sys.get_state(pid, 250))
+  catch
+    _, _ -> false
+  end
 
   def ms_until_midnight(today, timezone) do
     now = DateTime.now!(timezone)

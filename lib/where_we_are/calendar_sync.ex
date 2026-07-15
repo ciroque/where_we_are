@@ -1,12 +1,6 @@
 defmodule WhereWeAre.CalendarSync do
   @moduledoc """
-  OTP boundary for calendar synchronization.
-
-  Schedules CalDAV polls, stores the latest successful event list, caches
-  calendar metadata, and broadcasts `:events_updated` on PubSub.
-
-  Prefer `configured_calendars/1` and redacted `state/1` over digging into
-  connection secrets. Password values are never returned from `state/1`.
+  Manages and schedules the CalDAV synchronization process, exposing sync state and controls.
   """
   use GenServer
 
@@ -17,39 +11,37 @@ defmodule WhereWeAre.CalendarSync do
     GenServer.start_link(__MODULE__, opts, name: name)
   end
 
-  @doc "PubSub topic for a given sync server name or pid."
   def topic(server \\ __MODULE__) do
     server_id = if is_atom(server), do: Atom.to_string(server), else: inspect(server)
     "calendar_sync:" <> server_id
   end
 
-  @doc "Force an immediate sync."
   def sync_now(server \\ __MODULE__) do
     GenServer.call(server, :sync_now)
   end
 
-  @doc "Redacted public status (password never included)."
   def state(server \\ __MODULE__) do
     GenServer.call(server, :state)
   end
 
-  @doc "Cached calendar catalog when available, otherwise live client list."
   def list_calendars(server \\ __MODULE__) do
     GenServer.call(server, :list_calendars)
   end
 
-  @doc "Configured `CALDAV_CALENDARS` allow-list (may be empty)."
   def configured_calendars(server \\ __MODULE__) do
     GenServer.call(server, :configured_calendars)
   end
 
   def events_for_month(month_start) do
-    events_for_month(__MODULE__, month_start)
+    events_for_month(__MODULE__, month_start, "Etc/UTC")
   end
 
-  @doc "Events overlapping the calendar month of `month_start`."
   def events_for_month(server, month_start) do
-    GenServer.call(server, {:events_for_month, month_start})
+    events_for_month(server, month_start, "Etc/UTC")
+  end
+
+  def events_for_month(server, month_start, timezone) when is_binary(timezone) do
+    GenServer.call(server, {:events_for_month, month_start, timezone})
   end
 
   @impl true
@@ -74,24 +66,27 @@ defmodule WhereWeAre.CalendarSync do
   end
 
   def handle_call(:list_calendars, _from, store) do
-    reply =
-      case store.calendars do
-        calendars when is_list(calendars) and calendars != [] ->
-          {:ok, calendars}
+    case store.calendars do
+      calendars when is_list(calendars) ->
+        {:reply, {:ok, calendars}, store}
 
-        _ ->
-          store.client.list_calendars(Store.client_config(store))
-      end
+      nil ->
+        case store.client.list_calendars(Store.client_config(store)) do
+          {:ok, calendars} when is_list(calendars) ->
+            {:reply, {:ok, calendars}, %{store | calendars: calendars}}
 
-    {:reply, reply, store}
+          other ->
+            {:reply, other, store}
+        end
+    end
   end
 
   def handle_call(:configured_calendars, _from, store) do
     {:reply, Store.configured_calendars(store), store}
   end
 
-  def handle_call({:events_for_month, month_start}, _from, store) do
-    {:reply, Store.events_for_month(store, month_start), store}
+  def handle_call({:events_for_month, month_start, timezone}, _from, store) do
+    {:reply, Store.events_for_month(store, month_start, timezone), store}
   end
 
   @impl true
@@ -110,20 +105,30 @@ defmodule WhereWeAre.CalendarSync do
 
     case store.client.fetch_events(config) do
       {:ok, events} ->
-        calendars =
-          case store.client.list_calendars(config) do
-            {:ok, list} when is_list(list) -> list
-            _ -> store.calendars
-          end
+        store =
+          store
+          |> maybe_load_calendars()
+          |> Store.put_events(events)
 
-        store = Store.put_events(store, events, calendars: calendars)
         Phoenix.PubSub.broadcast(WhereWeAre.PubSub, topic(store.name), :events_updated)
         {{:ok, events}, store}
 
       {:error, reason} ->
         store = Store.put_error(store, reason)
+        # Surface sync failures to LiveView subscribers (same topic as successes).
         Phoenix.PubSub.broadcast(WhereWeAre.PubSub, topic(store.name), :events_updated)
         {{:error, reason}, store}
+    end
+  end
+
+  # Only hit the remote list_calendars endpoint when we have not fetched yet.
+  # Cached lists (including empty) are kept until process restart / explicit refresh.
+  defp maybe_load_calendars(%{calendars: calendars} = store) when is_list(calendars), do: store
+
+  defp maybe_load_calendars(store) do
+    case store.client.list_calendars(Store.client_config(store)) do
+      {:ok, list} when is_list(list) -> %{store | calendars: list}
+      _ -> store
     end
   end
 end

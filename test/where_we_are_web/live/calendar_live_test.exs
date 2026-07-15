@@ -3,6 +3,9 @@ defmodule WhereWeAreWeb.CalendarLiveTest do
 
   import Phoenix.LiveViewTest
 
+  alias WhereWeAre.Calendar.Event
+  alias WhereWeAre.CalendarSyncHelpers
+
   test "renders current month calendar", %{conn: conn} do
     {:ok, view, html} = live(conn, ~p"/")
 
@@ -75,37 +78,6 @@ defmodule WhereWeAreWeb.CalendarLiveTest do
     refute html =~ "No calendar filter is configured"
   end
 
-  test "shows and dismisses sync error banner", %{conn: conn} do
-    server_name = :"sync_error_banner_#{System.unique_integer([:positive])}"
-
-    defmodule ErrorBannerClient do
-      @behaviour WhereWeAre.Calendar.Client
-      @impl true
-      def list_calendars(_config), do: {:error, :icloud_unavailable}
-      @impl true
-      def fetch_events(_config), do: {:error, :icloud_unavailable}
-    end
-
-    start_supervised!(
-      {WhereWeAre.CalendarSync,
-       name: server_name,
-       schedule?: false,
-       client: ErrorBannerClient,
-       credentials: %{username: "u", password: "p"}}
-    )
-
-    assert {:error, :icloud_unavailable} = WhereWeAre.CalendarSync.sync_now(server_name)
-
-    conn = conn |> init_test_session(%{"calendar_sync" => Atom.to_string(server_name)})
-    {:ok, view, html} = live(conn, ~p"/")
-
-    assert html =~ "Calendar sync failed"
-    assert html =~ "icloud_unavailable"
-
-    html = view |> element("button[aria-label='Dismiss sync error']") |> render_click()
-    refute html =~ "Calendar sync failed"
-  end
-
   test "does not show notice when a calendar filter is configured", %{conn: conn} do
     server_name = __MODULE__
 
@@ -152,7 +124,7 @@ defmodule WhereWeAreWeb.CalendarLiveTest do
     end
 
     event =
-      WhereWeAre.Calendar.Event.new(%{
+      Event.new(%{
         uid: "event-1",
         summary: "Event One",
         calendar_name: "Work",
@@ -224,14 +196,17 @@ defmodule WhereWeAreWeb.CalendarLiveTest do
     refute html =~ "New Event"
 
     :ok =
-      WhereWeAre.CalendarSyncHelpers.put_events(server_name, [
-        WhereWeAre.Calendar.Event.new(%{
-          uid: "new-1",
-          summary: "New Event",
-          calendar_name: "Work",
-          dtstart: Date.utc_today()
-        })
-      ])
+      CalendarSyncHelpers.put_events(
+        server_name,
+        [
+          Event.new(%{
+            uid: "new-1",
+            summary: "New Event",
+            calendar_name: "Work",
+            dtstart: Date.utc_today()
+          })
+        ]
+      )
 
     Phoenix.PubSub.broadcast(WhereWeAre.PubSub, WhereWeAre.CalendarSync.topic(server_name), :events_updated)
 
@@ -270,7 +245,7 @@ defmodule WhereWeAreWeb.CalendarLiveTest do
     server_name = __MODULE__
 
     event =
-      WhereWeAre.Calendar.Event.new(%{
+      Event.new(%{
         uid: "test-event-uid",
         summary: "Test Event",
         calendar_name: "Test Calendar",

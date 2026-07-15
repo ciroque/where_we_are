@@ -1,6 +1,7 @@
 defmodule WhereWeAre.CalendarSync.CaldavClientTest do
   use ExUnit.Case, async: true
 
+  alias WhereWeAre.Calendar.Event
   alias WhereWeAre.CalendarSync.CaldavClient
 
   defmodule FakeClient do
@@ -57,7 +58,7 @@ defmodule WhereWeAre.CalendarSync.CaldavClientTest do
 
     assert {:ok,
             [
-              %WhereWeAre.Calendar.Event{
+              %Event{
                 summary: "Test Event",
                 calendar_name: "Home",
                 calendar_color: "#FF2D55FF"
@@ -86,7 +87,7 @@ defmodule WhereWeAre.CalendarSync.CaldavClientTest do
 
     assert {:ok,
             [
-              %WhereWeAre.Calendar.Event{
+              %Event{
                 summary: "Test Event",
                 calendar_name: "Home",
                 calendar_color: "#FF2D55FF"
