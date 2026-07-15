@@ -148,7 +148,7 @@ defmodule WhereWeAreWeb.Calendar.Assigns do
   end
 
   defp calendar_sync_pid?(pid) do
-    match?(%WhereWeAre.CalendarSync.Store{}, :sys.get_state(pid))
+    match?(%WhereWeAre.CalendarSync.Store{}, :sys.get_state(pid, 250))
   catch
     _, _ -> false
   end
