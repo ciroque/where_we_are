@@ -120,17 +120,30 @@ defmodule WhereWeAreWeb.Calendar.Assigns do
   end
 
   def resolve_calendar_sync(%{"calendar_sync" => name}) when is_binary(name) do
-    atom = String.to_existing_atom(name)
-
-    case Process.whereis(atom) do
-      nil -> WhereWeAre.CalendarSync
-      _pid -> atom
+    with atom when is_atom(atom) <- safe_existing_atom(name),
+         pid when is_pid(pid) <- Process.whereis(atom),
+         true <- calendar_sync_pid?(pid) do
+      atom
+    else
+      _ -> WhereWeAre.CalendarSync
     end
-  rescue
-    ArgumentError -> WhereWeAre.CalendarSync
   end
 
   def resolve_calendar_sync(_session), do: WhereWeAre.CalendarSync
+
+  defp safe_existing_atom(name) do
+    String.to_existing_atom(name)
+  rescue
+    ArgumentError -> nil
+  end
+
+  defp calendar_sync_pid?(pid) do
+    try do
+      match?(%WhereWeAre.CalendarSync.Store{}, :sys.get_state(pid))
+    catch
+      _, _ -> false
+    end
+  end
 
   def ms_until_midnight(today, timezone) do
     now = DateTime.now!(timezone)
