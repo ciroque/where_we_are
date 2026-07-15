@@ -39,20 +39,20 @@ Runtime options are loaded from the environment (`config/runtime.exs` via
 
 ## Architecture
 
-```
-Calendar.Client behaviour
-  ├── Calendar.NoopClient          # default / empty
-  └── CalendarSync.CaldavClient    # CalDAVEx adapter → Calendar.Event structs
+~~~
+WhereWeAre.Calendar.Client behaviour
+  ├── WhereWeAre.Calendar.NoopClient        # default / empty
+  └── WhereWeAre.CalendarSync.CaldavClient  # CalDAVEx adapter → WhereWeAre.Calendar.Event structs
 
-CalendarSync (GenServer)
-  └── CalendarSync.Store           # pure state, month queries, redacted status
-        └── Calendar.Window        # exclusive dtend, overlap, grid days
+WhereWeAre.CalendarSync (GenServer)
+  └── WhereWeAre.CalendarSync.Store         # pure state, month queries, redacted status
+        └── WhereWeAre.Calendar.Window      # exclusive dtend, overlap, grid days
 
 WhereWeAreWeb.CalendarLive
-  ├── Calendar.Assigns             # pure assign builders
-  ├── Calendar.ViewModel           # grid / agenda view models
-  └── CalendarComponents           # function components for the UI
-```
+  ├── WhereWeAreWeb.Calendar.Assigns        # pure assign builders
+  ├── WhereWeAreWeb.Calendar.ViewModel      # grid / agenda view models
+  └── WhereWeAreWeb.CalendarComponents      # function components for the UI
+~~~
 
 PubSub topic `calendar_sync:<server>` broadcasts `:events_updated` after each
 sync attempt (success or failure). LiveView refreshes events and optionally
