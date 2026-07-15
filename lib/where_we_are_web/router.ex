@@ -19,7 +19,7 @@ defmodule WhereWeAreWeb.Router do
     pipe_through :browser
 
     # Legacy path: previously a static HTML calendar; keep redirect for bookmarks.
-    get "/static", PageController, :home
+    redirect "/static", to: "/"
 
     live_session :default, session: {WhereWeAreWeb.CalendarLive, :session, []} do
       live "/", CalendarLive
