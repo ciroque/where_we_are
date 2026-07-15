@@ -10,7 +10,7 @@ defmodule WhereWeAre.CalendarSyncHelpers do
   """
   def put_events(server, events) when is_list(events) do
     :sys.replace_state(server, fn store ->
-      Store.put_events(store, events)
+      %{store | events: events}
     end)
 
     :ok
