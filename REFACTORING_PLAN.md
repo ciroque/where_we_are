@@ -593,7 +593,7 @@ When you are ready to execute, start at Phase 0 on a branch named `refactor/cale
 
 ## 15. Execution status (2026-04-10)
 
-Implemented as a local stacked branch tip at `chore/docs-cleanup` (not pushed).
+Implemented and merged; originally developed as a local stacked branch tip at `chore/docs-cleanup`.
 
 | Branch | Phase | Status |
 |--------|-------|--------|
