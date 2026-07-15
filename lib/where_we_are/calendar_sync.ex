@@ -88,7 +88,7 @@ defmodule WhereWeAre.CalendarSync do
 
   if Mix.env() == :test do
     def handle_call({:set_events, events}, _from, store) when is_list(events) do
-      {:reply, :ok, Store.put_events(store, events)}
+      {:reply, :ok, %{store | events: events}}
     end
   end
 
