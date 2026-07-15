@@ -112,10 +112,10 @@ defmodule WhereWeAre.CalendarSyncTest do
       )
 
     assert {:ok, []} = CalendarSync.list_calendars(pid)
-    assert Agent.get(:list_calendars_call_counter, & &1) == 1
+    assert Agent.get(counter, & &1) == 1
 
     assert {:ok, []} = CalendarSync.list_calendars(pid)
-    assert Agent.get(:list_calendars_call_counter, & &1) == 1
+    assert Agent.get(counter, & &1) == 1
 
     assert %{calendars: []} = CalendarSync.state(pid)
   end
