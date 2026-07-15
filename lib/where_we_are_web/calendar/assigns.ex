@@ -21,12 +21,14 @@ defmodule WhereWeAreWeb.Calendar.Assigns do
   def resolve_displayed_month(_params, today),
     do: Date.beginning_of_month(today)
 
-  def parse_month(month_param, today) do
+  def parse_month(month_param, today) when is_binary(month_param) do
     case Date.from_iso8601(month_param) do
       {:ok, date} -> Date.beginning_of_month(date)
       _error -> Date.beginning_of_month(today)
     end
   end
+
+  def parse_month(_month_param, today), do: Date.beginning_of_month(today)
 
   def resolve_selected_calendars(%{"selected_calendars" => saved}, known_calendars)
       when is_binary(saved) and saved != "" do
