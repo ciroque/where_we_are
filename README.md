@@ -58,8 +58,6 @@ PubSub topic `calendar_sync:<server>` broadcasts `:events_updated` after each
 sync attempt (success or failure). LiveView refreshes events and optionally
 shows a sync error banner.
 
-Legacy URL `/static` redirects to `/`.
-
 ## Development
 
 ```bash
