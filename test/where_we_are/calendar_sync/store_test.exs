@@ -44,4 +44,12 @@ defmodule WhereWeAre.CalendarSync.StoreTest do
     assert store.events == events
     assert store.calendars == [%{display_name: "Home"}]
   end
+
+  test "calendars default to nil (unfetched) and can store an empty fetched list" do
+    store = Store.new(client: WhereWeAre.Calendar.NoopClient)
+    assert store.calendars == nil
+
+    store = Store.put_events(store, [], calendars: [])
+    assert store.calendars == []
+  end
 end

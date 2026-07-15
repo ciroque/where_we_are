@@ -22,7 +22,8 @@ defmodule WhereWeAre.CalendarSync.Store do
             last_sync: nil,
             last_error: nil,
             events: [],
-            calendars: [],
+            # nil = not yet fetched; [] = fetched and empty
+            calendars: nil,
             schedule?: true
 
   @type t :: %__MODULE__{}
@@ -41,7 +42,7 @@ defmodule WhereWeAre.CalendarSync.Store do
       filter: filter,
       credentials: credentials,
       events: Keyword.get(opts, :initial_events, []),
-      calendars: Keyword.get(opts, :initial_calendars, []),
+      calendars: Keyword.get(opts, :initial_calendars, nil),
       schedule?: Keyword.get(opts, :schedule?, true)
     }
   end
@@ -62,8 +63,8 @@ defmodule WhereWeAre.CalendarSync.Store do
     %{store | last_error: reason}
   end
 
-  def events_for_month(%__MODULE__{events: events}, month_start) do
-    Window.events_for_month(events, month_start)
+  def events_for_month(%__MODULE__{events: events}, month_start, timezone \\ "Etc/UTC") do
+    Window.events_for_month(events, month_start, timezone)
   end
 
   def configured_calendars(%__MODULE__{filter: filter, credentials: credentials}) do

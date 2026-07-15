@@ -29,7 +29,7 @@ defmodule WhereWeAreWeb.CalendarLive do
         schedule_day_refresh(today, timezone)
       end
 
-    all_events = CalendarSync.events_for_month(calendar_sync, displayed_month)
+    all_events = CalendarSync.events_for_month(calendar_sync, displayed_month, timezone)
     {known_calendars, calendar_colors} = load_calendar_meta(calendar_sync, all_events)
 
     selected =
@@ -68,15 +68,17 @@ defmodule WhereWeAreWeb.CalendarLive do
     {:noreply, assign(socket, today: today, day_refresh_ref: ref)}
   end
 
+  @impl true
   def handle_info(:events_updated, socket) do
     %{
       calendar_sync: calendar_sync,
       displayed_month: month,
       selected_calendars: selected,
-      known_calendars: prev_known
+      known_calendars: prev_known,
+      timezone: timezone
     } = socket.assigns
 
-    all_events = CalendarSync.events_for_month(calendar_sync, month)
+    all_events = CalendarSync.events_for_month(calendar_sync, month, timezone)
     {known_calendars, calendar_colors} = load_calendar_meta(calendar_sync, all_events)
     selected = Assigns.merge_selected_with_new(selected, prev_known, known_calendars)
     last_error = sync_last_error(calendar_sync)
@@ -156,8 +158,13 @@ defmodule WhereWeAreWeb.CalendarLive do
   end
 
   defp load_month(socket, month) do
-    %{calendar_sync: calendar_sync, calendar_colors: existing_colors} = socket.assigns
-    all_events = CalendarSync.events_for_month(calendar_sync, month)
+    %{
+      calendar_sync: calendar_sync,
+      calendar_colors: existing_colors,
+      timezone: timezone
+    } = socket.assigns
+
+    all_events = CalendarSync.events_for_month(calendar_sync, month, timezone)
     new_colors = Assigns.calendar_colors({:ok, []}, all_events)
 
     socket
@@ -182,12 +189,13 @@ defmodule WhereWeAreWeb.CalendarLive do
 
   defp load_calendar_meta(calendar_sync, all_events) do
     calendars_result = CalendarSync.list_calendars(calendar_sync)
-    configured = CalendarSync.configured_calendars(calendar_sync)
 
-    {
-      Assigns.known_calendars(calendars_result, all_events, configured),
-      Assigns.calendar_colors(calendars_result, all_events)
-    }
+    known =
+      Assigns.known_calendars(calendars_result, all_events, fn ->
+        CalendarSync.configured_calendars(calendar_sync)
+      end)
+
+    {known, Assigns.calendar_colors(calendars_result, all_events)}
   end
 
   defp sync_last_error(calendar_sync) do
