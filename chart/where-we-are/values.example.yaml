@@ -1,0 +1,55 @@
+# Example production overrides.
+#   cp chart/where-we-are/values.example.yaml my-values.yaml
+#   # edit secrets and host
+#   helm upgrade --install where-we-are chart/where-we-are -n where-we-are --create-namespace -f my-values.yaml
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/ciroque/where_we_are
+  pullPolicy: IfNotPresent
+  tag: "latest" # prefer a sha or run number from GH Actions
+
+imagePullSecrets:
+  - name: ghcr-pull
+
+env:
+  PHX_SERVER: "true"
+  PHX_HOST: "where.example.com"
+  PORT: "4000"
+
+secretKeyBase: "REPLACE_WITH_mix_phx.gen.secret_OUTPUT"
+
+caldav:
+  username: "you@icloud.com"
+  password: "app-specific-password"
+  url: "https://caldav.icloud.com"
+  # Leave empty to include all calendars, or list display names:
+  calendars: "Family,Home"
+  eventWindowMonths: 6
+  expandRecurrences: true
+  pollMinutes: 10
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: where.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: where-we-are-tls
+      hosts:
+        - where.example.com
+
+# Optional if you create Certificates via the chart instead of ingress annotations:
+certificate:
+  enabled: false
+  secretName: where-we-are-tls
+  issuerName: letsencrypt-prod
+  issuerKind: ClusterIssuer
+  dnsNames:
+    - where.example.com

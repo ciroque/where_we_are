@@ -1,0 +1,16 @@
+# Patterns to ignore when packaging.
+.DS_Store
+# Common VCS dirs
+.git/
+.gitignore
+# CI
+.github/
+# IDE
+.idea/
+*.swp
+*.bak
+*.tmp
+*.orig
+*~
+# Docs / examples that are not needed in the package payload
+# (values.example.yaml is kept so `helm show values` users can find it nearby)
