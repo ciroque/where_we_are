@@ -68,66 +68,31 @@ mix dialyzer
 
 ## Deployment
 
-### Container image
-
 Multi-stage `Dockerfile` builds a production release. CI pushes signed images to
-GHCR (`ghcr.io/<owner>/where_we_are`) on merge to `main` (see
-`.github/workflows/build-signed-image.yml`).
+`ghcr.io/ciroque/where_we_are` on merge to `main`.
+
+The Helm chart (`chart/where-we-are/`) follows the same layout as the working
+ExerTrax chart: digest-pinned images, Traefik ingress, cert-manager, GHCR pull
+secret `ghcr-package-read`. See [chart/where-we-are/README.md](./chart/where-we-are/README.md).
 
 ```bash
-# Local build (optional)
-docker build -t where-we-are:local .
+export DIGEST=sha256:...   # from GHCR / CI
+export HOST=where-we-are.example.com
+export WHERE_WE_ARE_SECRET_KEY_BASE="$(mix phx.gen.secret)"  # once; keep stable
+
+helm upgrade --install where-we-are ./chart/where-we-are \
+  --set app.secretKeyBase="$WHERE_WE_ARE_SECRET_KEY_BASE" \
+  --set app.phxHost="$HOST" \
+  --set app.caldav.username="you@icloud.com" \
+  --set app.caldav.password="$CALDAV_APP_PASSWORD" \
+  --set image.digest="$DIGEST" \
+  --set ingress.hosts[0].host="$HOST" \
+  --set ingress.tls[0].hosts[0]="$HOST" \
+  --set certificate.dnsNames[0]="$HOST" \
+  -n where-we-are --create-namespace
 ```
 
-### Helm
-
-Chart path: `chart/where-we-are/`.
-
-Calendar state is **in-memory per pod**. Keep `replicaCount: 1` unless you add
-session affinity and accept divergent caches.
-
-```bash
-# 1) Generate a stable Phoenix secret (do not regenerate on every upgrade)
-mix phx.gen.secret
-
-# 2) Copy and edit overrides
-cp chart/where-we-are/values.example.yaml my-values.yaml
-# set secretKeyBase, caldav.*, env.PHX_HOST, image.tag, ingress, imagePullSecrets
-
-# 3) Private GHCR image pull secret (if the package is private)
-kubectl create namespace where-we-are
-kubectl -n where-we-are create secret docker-registry ghcr-pull \
-  --docker-server=ghcr.io \
-  --docker-username=YOUR_GITHUB_USER \
-  --docker-password=YOUR_GITHUB_PAT
-
-# 4) Install / upgrade
-helm upgrade --install where-we-are chart/where-we-are \
-  --namespace where-we-are \
-  --create-namespace \
-  -f my-values.yaml
-
-# 5) Verify
-kubectl -n where-we-are get pods,svc,ingress
-kubectl -n where-we-are logs -l app.kubernetes.io/name=where-we-are -f
-```
-
-Required values:
-
-| Value | Notes |
-|-------|--------|
-| `secretKeyBase` | From `mix phx.gen.secret`; keep stable across upgrades |
-| `caldav.username` / `caldav.password` | iCloud needs an [app-specific password](https://support.apple.com/en-us/HT204397) |
-| `env.PHX_HOST` | Public hostname browsers use (must match ingress host) |
-| `image.repository` / `image.tag` | Image from GHCR or your registry |
-
-Optional CalDAV knobs: `caldav.calendars`, `caldav.url`, `caldav.eventWindowMonths`,
-`caldav.expandRecurrences`, `caldav.pollMinutes`.
-
-```bash
-helm lint chart/where-we-are
-helm template where-we-are chart/where-we-are -f my-values.yaml | less
-```
+Keep `replicaCount: 1` — calendar state is in-memory per pod.
 
 ## Refactoring notes
 

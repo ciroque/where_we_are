@@ -8,26 +8,17 @@ spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
-  {{- with .Values.strategy }}
-  strategy:
-    {{- toYaml . | nindent 4 }}
-  {{- end }}
   selector:
     matchLabels:
       {{- include "where-we-are.selectorLabels" . | nindent 6 }}
   template:
     metadata:
+      {{- with .Values.podAnnotations }}
       annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
-        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
-        {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
-        {{- end }}
+      {{- end }}
       labels:
-        {{- include "where-we-are.labels" . | nindent 8 }}
-        {{- with .Values.podLabels }}
-        {{- toYaml . | nindent 8 }}
-        {{- end }}
+        {{- include "where-we-are.selectorLabels" . | nindent 8 }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -40,30 +31,68 @@ spec:
         - name: {{ .Chart.Name }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- if .Values.image.digest }}
+          image: "{{ .Values.image.repository }}@{{ .Values.image.digest }}"
+          {{- else }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
-          envFrom:
-            - configMapRef:
-                name: {{ include "where-we-are.fullname" . }}-config
-                optional: false
-            - secretRef:
-                name: {{ include "where-we-are.fullname" . }}
-                optional: false
-            {{- with .Values.extraEnvFrom }}
-            {{- toYaml . | nindent 12 }}
-            {{- end }}
-          {{- with .Values.extraEnv }}
-          env:
-            {{- toYaml . | nindent 12 }}
           {{- end }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: SECRET_KEY_BASE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "where-we-are.fullname" . }}
+                  key: secret-key-base
+            {{- if .Values.app.caldav.username }}
+            - name: CALDAV_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "where-we-are.fullname" . }}
+                  key: caldav-username
+            {{- end }}
+            {{- if .Values.app.caldav.password }}
+            - name: CALDAV_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "where-we-are.fullname" . }}
+                  key: caldav-password
+            {{- end }}
+            - name: PHX_SERVER
+              value: "true"
+            - name: PHX_HOST
+              value: {{ .Values.app.phxHost | quote }}
+            - name: PORT
+              value: "4000"
+            - name: MIX_ENV
+              value: {{ .Values.app.environment | quote }}
+            - name: CALDAV_URL
+              value: {{ .Values.app.caldav.url | quote }}
+            - name: CALDAV_CALENDARS
+              value: {{ .Values.app.caldav.calendars | quote }}
+            - name: CALDAV_EVENT_WINDOW_MONTHS
+              value: {{ .Values.app.caldav.eventWindowMonths | quote }}
+            - name: CALDAV_EXPAND_RECURRENCES
+              value: {{ .Values.app.caldav.expandRecurrences | quote }}
+            - name: CALDAV_POLL_MINUTES
+              value: {{ .Values.app.caldav.pollMinutes | quote }}
           ports:
             - name: http
-              containerPort: {{ .Values.service.targetPort }}
+              containerPort: 4000
               protocol: TCP
           livenessProbe:
-            {{- toYaml .Values.livenessProbe | nindent 12 }}
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+            periodSeconds: 10
           readinessProbe:
-            {{- toYaml .Values.readinessProbe | nindent 12 }}
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 15
+            timeoutSeconds: 5
+            periodSeconds: 5
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}

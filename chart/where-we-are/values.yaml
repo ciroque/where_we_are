@@ -1,89 +1,61 @@
-# Default values for where-we-are.
-# Override with -f my-values.yaml or --set for production.
+# Default values for where-we-are (aligned with charts/exertrax_fitness_ng).
 
 replicaCount: 1
 
 image:
-  # GHCR image from .github/workflows/build-signed-image.yml
   repository: ghcr.io/ciroque/where_we_are
   pullPolicy: IfNotPresent
-  # Prefer an immutable tag (run number or sha) over "latest" in production.
-  tag: "latest"
+  # Immutable image pin (preferred). Set at install time:
+  #   --set image.digest=sha256:...
+  digest: ""
 
-# Required for private GHCR packages (create a pull secret with a PAT).
-#   kubectl create secret docker-registry ghcr-pull \
-#     --docker-server=ghcr.io \
-#     --docker-username=YOUR_GITHUB_USER \
-#     --docker-password=YOUR_PAT
-imagePullSecrets: []
-# imagePullSecrets:
-#   - name: ghcr-pull
+# Cluster-local secret that can pull private GHCR packages (same as ExerTrax).
+imagePullSecrets:
+  - name: ghcr-package-read
 
 nameOverride: ""
 fullnameOverride: ""
 
 serviceAccount:
-  create: true
-  automount: false
+  create: false
   annotations: {}
   name: ""
 
 podAnnotations: {}
 
-podLabels: {}
+podSecurityContext: {}
 
-podSecurityContext:
-  runAsNonRoot: true
-  runAsUser: 1000
-  fsGroup: 1000
-
-securityContext:
-  allowPrivilegeEscalation: false
-  capabilities:
-    drop:
-      - ALL
-  readOnlyRootFilesystem: false
-  runAsNonRoot: true
-  runAsUser: 1000
+securityContext: {}
 
 service:
   type: ClusterIP
-  port: 4000
+  # External service port (what Ingress targets)
+  port: 80
+  # Container port (Phoenix / Bandit)
   targetPort: 4000
 
 ingress:
-  enabled: false
-  className: ""
-  annotations: {}
-  # Example:
-  # enabled: true
-  # className: nginx
-  # annotations:
-  #   cert-manager.io/cluster-issuer: letsencrypt-prod
-  # hosts:
-  #   - host: where.example.com
-  #     paths:
-  #       - path: /
-  #         pathType: Prefix
-  # tls:
-  #   - secretName: where-we-are-tls
-  #     hosts:
-  #       - where.example.com
+  enabled: true
+  className: "traefik"
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
   hosts:
     - host: where-we-are.local
       paths:
         - path: /
           pathType: Prefix
-  tls: []
+  tls:
+    - hosts:
+        - where-we-are.local
+      secretName: where-we-are-tls-secret
 
-# Optional cert-manager Certificate CR (requires cert-manager installed).
-# Prefer ingress annotations for many setups; enable this if you manage certs separately.
 certificate:
-  enabled: false
-  secretName: where-we-are-tls
-  issuerName: letsencrypt-prod
+  enabled: true
+  secretName: where-we-are-tls-secret
+  issuerName: letsencrypt-dns
   issuerKind: ClusterIssuer
-  dnsNames: []
+  dnsNames:
+    - where-we-are.local
 
 resources:
   limits:
@@ -93,32 +65,11 @@ resources:
     cpu: 100m
     memory: 256Mi
 
-# Elixir releases can take a few seconds to boot; keep initial delays generous.
-livenessProbe:
-  httpGet:
-    path: /
-    port: http
-  initialDelaySeconds: 30
-  periodSeconds: 30
-  timeoutSeconds: 5
-  failureThreshold: 3
-
-readinessProbe:
-  httpGet:
-    path: /
-    port: http
-  initialDelaySeconds: 15
-  periodSeconds: 10
-  timeoutSeconds: 3
-  failureThreshold: 3
-
-# Keep disabled: calendar state is in-memory per pod (no shared store).
 autoscaling:
   enabled: false
   minReplicas: 1
   maxReplicas: 3
   targetCPUUtilizationPercentage: 80
-  targetMemoryUtilizationPercentage: 80
 
 nodeSelector: {}
 
@@ -126,38 +77,20 @@ tolerations: []
 
 affinity: {}
 
-# With replicaCount > 1 each pod has its own calendar cache.
-# Prefer a single replica unless you add sticky sessions.
-strategy:
-  type: RollingUpdate
-  rollingUpdate:
-    maxUnavailable: 0
-    maxSurge: 1
-
-env:
-  PHX_SERVER: "true"
-  # Public hostname clients use (must match ingress host for LiveView/WebSockets).
-  PHX_HOST: "localhost"
-  PORT: "4000"
-
-# Secret key base used by Phoenix to sign/encrypt cookies (SECRET_KEY_BASE).
-# Generate with: mix phx.gen.secret
-# Must be set and remain stable across upgrades.
-secretKeyBase: ""
-
-# CalDAV configuration for calendar sync
-caldav:
-  # Comma-separated calendar display names; empty = all calendars from the server.
-  calendars: ""
-  url: "https://caldav.icloud.com"
-  username: ""
-  password: ""
-  eventWindowMonths: 6
-  expandRecurrences: true
-  pollMinutes: 10
-
-# Additional environment variables (list of {name, value} or valueFrom maps)
-extraEnv: []
-
-# Additional envFrom sources (configMapRef / secretRef)
-extraEnvFrom: []
+# Application configuration (Phoenix + CalDAV)
+app:
+  # Generate with: mix phx.gen.secret
+  # Keep stable across upgrades.
+  secretKeyBase: ""
+  environment: "prod"
+  # Public hostname browsers use (must match ingress host for LiveView).
+  phxHost: "where-we-are.local"
+  caldav:
+    username: ""
+    password: ""
+    url: "https://caldav.icloud.com"
+    # Comma-separated calendar display names; empty = all calendars.
+    calendars: ""
+    eventWindowMonths: 6
+    expandRecurrences: true
+    pollMinutes: 10

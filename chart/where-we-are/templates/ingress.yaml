@@ -1,12 +1,11 @@
 {{- if .Values.ingress.enabled -}}
 {{- $fullName := include "where-we-are.fullname" . -}}
 {{- $svcPort := .Values.service.port -}}
-{{- $ingressAnnotations := default dict .Values.ingress.annotations -}}
-{{- if and .Values.ingress.className (not (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion)) -}}
-{{- if not (hasKey $ingressAnnotations "kubernetes.io/ingress.class") -}}
-{{- $_ := set $ingressAnnotations "kubernetes.io/ingress.class" .Values.ingress.className -}}
-{{- end -}}
-{{- end -}}
+{{- if and .Values.ingress.className (not (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion)) }}
+  {{- if not (hasKey .Values.ingress.annotations "kubernetes.io/ingress.class") }}
+  {{- $_ := set .Values.ingress.annotations "kubernetes.io/ingress.class" .Values.ingress.className}}
+  {{- end }}
+{{- end }}
 {{- if semverCompare ">=1.19-0" .Capabilities.KubeVersion.GitVersion }}
 apiVersion: networking.k8s.io/v1
 {{- else if semverCompare ">=1.14-0" .Capabilities.KubeVersion.GitVersion }}
@@ -20,9 +19,9 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "where-we-are.labels" . | nindent 4 }}
-  {{- if gt (len $ingressAnnotations) 0 }}
+  {{- with .Values.ingress.annotations }}
   annotations:
-    {{- toYaml $ingressAnnotations | nindent 4 }}
+    {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
   {{- if and .Values.ingress.className (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion) }}
@@ -45,9 +44,7 @@ spec:
         paths:
           {{- range .paths }}
           - path: {{ .path }}
-            {{- if semverCompare ">=1.18-0" $.Capabilities.KubeVersion.GitVersion }}
             pathType: {{ .pathType }}
-            {{- end }}
             backend:
               {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
               service:
