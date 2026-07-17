@@ -17,6 +17,8 @@ nameOverride: ""
 fullnameOverride: ""
 
 serviceAccount:
+  # false = use "default" (or serviceAccount.name if set; must already exist).
+  # true  = create a chart-managed ServiceAccount.
   create: false
   annotations: {}
   name: ""

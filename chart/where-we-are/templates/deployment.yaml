@@ -62,7 +62,7 @@ spec:
             - name: PHX_HOST
               value: {{ .Values.app.phxHost | quote }}
             - name: PORT
-              value: "4000"
+              value: {{ .Values.service.targetPort | quote }}
             - name: MIX_ENV
               value: {{ .Values.app.environment | quote }}
             - name: CALDAV_URL
@@ -77,7 +77,7 @@ spec:
               value: {{ .Values.app.caldav.pollMinutes | quote }}
           ports:
             - name: http
-              containerPort: 4000
+              containerPort: {{ .Values.service.targetPort }}
               protocol: TCP
           livenessProbe:
             httpGet:
