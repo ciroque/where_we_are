@@ -5,6 +5,9 @@ replicaCount: 1
 image:
   repository: ghcr.io/ciroque/where_we_are
   pullPolicy: IfNotPresent
+  # Used when digest is empty. CI publishes :latest, :<run_number>, :<sha>
+  # (not Chart.appVersion). Prefer digest for production.
+  tag: "latest"
   # Immutable image pin (preferred). Set at install time:
   #   --set image.digest=sha256:...
   digest: ""
@@ -51,8 +54,10 @@ service:
   # Container port (Phoenix / Bandit)
   targetPort: 4000
 
+# Off by default so installs work without an Ingress controller.
+# Enable explicitly for Traefik (or your controller) + public DNS.
 ingress:
-  enabled: true
+  enabled: false
   className: "traefik"
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
@@ -66,8 +71,9 @@ ingress:
         - where-we-are.local
       secretName: where-we-are-tls-secret
 
+# Off by default (requires cert-manager CRDs + ClusterIssuer).
 certificate:
-  enabled: true
+  enabled: false
   secretName: where-we-are-tls-secret
   issuerName: letsencrypt-dns
   issuerKind: ClusterIssuer

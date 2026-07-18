@@ -10,11 +10,32 @@ secrets wired via `valueFrom`.
 
 - Kubernetes 1.19+
 - Helm 3.0+
-- Traefik ingress controller (or change `ingress.className`)
-- cert-manager with a `ClusterIssuer` named `letsencrypt-dns` (or change `certificate.*`)
 - Image pull secret `ghcr-package-read` in the target namespace (or override `imagePullSecrets`)
 
+For public HTTPS (optional; off by default):
+
+- Traefik ingress controller (or change `ingress.className`)
+- cert-manager with a `ClusterIssuer` named `letsencrypt-dns` (or change `certificate.*`)
+
 ## Installing the Chart
+
+Minimal install (ClusterIP only; use `kubectl port-forward` from NOTES):
+
+```bash
+export WHERE_WE_ARE_SECRET_KEY_BASE=<output from `mix phx.gen.secret`; keep stable>
+export DIGEST=<image digest from GHCR, e.g. sha256:...>
+
+helm upgrade --install where-we-are ./chart/where-we-are \
+  --set app.secretKeyBase="$WHERE_WE_ARE_SECRET_KEY_BASE" \
+  --set app.caldav.username="you@icloud.com" \
+  --set app.caldav.password="$CALDAV_APP_PASSWORD" \
+  --set app.caldav.calendars="Family,Home" \
+  --set image.digest="$DIGEST" \
+  -n where-we-are \
+  --create-namespace
+```
+
+Public HTTPS with Traefik + cert-manager:
 
 ```bash
 # Optional: load shared secrets from your devenv files
@@ -31,8 +52,10 @@ helm upgrade --install where-we-are ./chart/where-we-are \
   --set app.caldav.password="$CALDAV_APP_PASSWORD" \
   --set app.caldav.calendars="Family,Home" \
   --set image.digest="$DIGEST" \
+  --set ingress.enabled=true \
   --set ingress.hosts[0].host="$HOST" \
   --set ingress.tls[0].hosts[0]="$HOST" \
+  --set certificate.enabled=true \
   --set certificate.dnsNames[0]="$HOST" \
   -n where-we-are \
   --create-namespace
@@ -75,15 +98,16 @@ helm delete where-we-are -n where-we-are
 |-----------|-------------|---------|
 | `replicaCount` | Replicas (keep `1` — in-memory calendar cache) | `1` |
 | `image.repository` | Image repository | `ghcr.io/ciroque/where_we_are` |
-| `image.digest` | Image digest (`sha256:...`) | `""` |
+| `image.tag` | Image tag (when digest empty) | `latest` |
+| `image.digest` | Image digest (`sha256:...`; preferred) | `""` |
 | `image.pullPolicy` | Pull policy | `IfNotPresent` |
 | `imagePullSecrets` | Pull secrets | `[{name: ghcr-package-read}]` |
 | `service.type` | Service type | `ClusterIP` |
 | `service.port` | Service port (Ingress backend) | `80` |
 | `service.targetPort` | Container port | `4000` |
-| `ingress.enabled` | Enable Ingress | `true` |
+| `ingress.enabled` | Enable Ingress | `false` |
 | `ingress.className` | Ingress class | `traefik` |
-| `certificate.enabled` | cert-manager Certificate | `true` |
+| `certificate.enabled` | cert-manager Certificate | `false` |
 | `certificate.issuerName` | ClusterIssuer name | `letsencrypt-dns` |
 | `app.secretKeyBase` | Phoenix `SECRET_KEY_BASE` | `""` **required** |
 | `app.phxHost` | Public host (`PHX_HOST`) | `where-we-are.local` |

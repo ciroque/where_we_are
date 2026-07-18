@@ -13,12 +13,11 @@ spec:
   minReplicas: {{ .Values.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.autoscaling.maxReplicas }}
   metrics:
-    {{- if .Values.autoscaling.targetCPUUtilizationPercentage }}
+    # autoscaling/v2 requires at least one metric; fail loudly if misconfigured.
     - type: Resource
       resource:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: {{ .Values.autoscaling.targetCPUUtilizationPercentage }}
-    {{- end }}
+          averageUtilization: {{ required "autoscaling.targetCPUUtilizationPercentage is required when autoscaling.enabled is true" .Values.autoscaling.targetCPUUtilizationPercentage }}
 {{- end }}
