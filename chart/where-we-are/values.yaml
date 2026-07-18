@@ -1,4 +1,4 @@
-# Default values for where-we-are (aligned with charts/exertrax_fitness_ng).
+# Default values for where-we-are Helm chart.
 
 replicaCount: 1
 
@@ -20,14 +20,29 @@ serviceAccount:
   # false = use "default" (or serviceAccount.name if set; must already exist).
   # true  = create a chart-managed ServiceAccount.
   create: false
+  # App does not call the Kubernetes API; keep tokens out of the pod.
+  automount: false
   annotations: {}
   name: ""
 
 podAnnotations: {}
 
-podSecurityContext: {}
+podLabels: {}
 
-securityContext: {}
+# Match Dockerfile appuser (UID/GID 1000).
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 1000
 
 service:
   type: ClusterIP

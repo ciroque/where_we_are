@@ -2,7 +2,7 @@
 
 Deploys the WhereWeAre Phoenix LiveView app on Kubernetes.
 
-Patterns match the working ExerTrax chart (`charts/exertrax_fitness_ng`):
+Patterns match the working ExerTrax chart conventions:
 digest-pinned GHCR images, Traefik ingress, cert-manager Certificate, and
 secrets wired via `valueFrom`.
 
@@ -22,6 +22,7 @@ secrets wired via `valueFrom`.
 
 export DIGEST=<image digest from GHCR, e.g. sha256:...>
 export HOST=where-we-are.example.com   # your real DNS name
+export WHERE_WE_ARE_SECRET_KEY_BASE=<output from `mix phx.gen.secret`; keep stable>
 
 helm upgrade --install where-we-are ./chart/where-we-are \
   --set app.secretKeyBase="$WHERE_WE_ARE_SECRET_KEY_BASE" \

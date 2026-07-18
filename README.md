@@ -71,9 +71,9 @@ mix dialyzer
 Multi-stage `Dockerfile` builds a production release. CI pushes signed images to
 `ghcr.io/ciroque/where_we_are` on merge to `main`.
 
-The Helm chart (`chart/where-we-are/`) follows the same layout as the working
-ExerTrax chart: digest-pinned images, Traefik ingress, cert-manager, GHCR pull
-secret `ghcr-package-read`. See [chart/where-we-are/README.md](./chart/where-we-are/README.md).
+The Helm chart (`chart/where-we-are/`) uses digest-pinned images, Traefik
+ingress, cert-manager, and GHCR pull secret `ghcr-package-read`. See
+[chart/where-we-are/README.md](./chart/where-we-are/README.md).
 
 ```bash
 export DIGEST=sha256:...   # from GHCR / CI
