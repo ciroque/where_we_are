@@ -85,7 +85,7 @@ export WHERE_WE_ARE_SECRET_KEY_BASE="..."  # keep stable across upgrades
 helm upgrade --install where-we-are ./chart/where-we-are \
   --set app.secretKeyBase="$WHERE_WE_ARE_SECRET_KEY_BASE" \
   --set app.phxHost="$HOST" \
-  --set app.caldav.username="you@icloud.com" \
+  --set app.caldav.username="$CALDAV_APP_USERNAME" \
   --set app.caldav.password="$CALDAV_APP_PASSWORD" \
   --set image.digest="$DIGEST" \
   --set ingress.enabled=true \
