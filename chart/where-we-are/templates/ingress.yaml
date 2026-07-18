@@ -43,10 +43,15 @@ spec:
     - host: {{ .host | quote }}
       http:
         paths:
-          {{- range .paths }}
+          {{- /*
+            Helm --set ingress.hosts[0].host=... replaces the whole list item and
+            drops paths. Default to / Prefix so that install pattern is valid.
+          */ -}}
+          {{- $paths := .paths | default (list (dict "path" "/" "pathType" "Prefix")) }}
+          {{- range $paths }}
           - path: {{ .path }}
             {{- if semverCompare ">=1.18-0" $.Capabilities.KubeVersion.GitVersion }}
-            pathType: {{ .pathType }}
+            pathType: {{ .pathType | default "Prefix" }}
             {{- end }}
             backend:
               {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
