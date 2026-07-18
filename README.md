@@ -84,8 +84,8 @@ ingress, cert-manager, and GHCR pull secret `ghcr-package-read`. See
 ```bash
 export DIGEST=sha256:...   # from GHCR / CI
 export HOST=where-we-are.example.com
-export CALDAV_USERNAME=you@icloud.com   # Apple ID / CalDAV username
-export CALDAV_PASSWORD=...   # iCloud app-specific password
+export CALDAV_USERNAME=...   # CalDAV username
+export CALDAV_PASSWORD=...   # CalDAV password
 # Generate once: mix phx.gen.secret
 export WHERE_WE_ARE_SECRET_KEY_BASE="..."  # keep stable across upgrades
 

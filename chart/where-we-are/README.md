@@ -23,14 +23,14 @@ Minimal install (ClusterIP only; use `kubectl port-forward` from NOTES):
 
 ```bash
 export DIGEST=<image digest from GHCR, e.g. sha256:...>
-export CALDAV_USERNAME=...   # iCloud username
-export CALDAV_PASSWORD=...   # iCloud password
+export CALDAV_USERNAME=...   # CalDAV username
+export CALDAV_PASSWORD=...   # CalDAV password
 # Generate once: mix phx.gen.secret
 export WHERE_WE_ARE_SECRET_KEY_BASE="..."  # keep stable across upgrades
 
 helm upgrade --install where-we-are ./chart/where-we-are \
   --set app.secretKeyBase="$WHERE_WE_ARE_SECRET_KEY_BASE" \
-  --set app.caldav.username="you@icloud.com" \
+  --set app.caldav.username="$CALDAV_USERNAME" \
   --set app.caldav.password="$CALDAV_PASSWORD" \
   --set app.caldav.calendars="Family,Home" \
   --set image.digest="$DIGEST" \
@@ -46,8 +46,8 @@ Public HTTPS with Traefik + cert-manager:
 
 export DIGEST=<image digest from GHCR, e.g. sha256:...>
 export HOST=where-we-are.example.com   # your real DNS name
-export CALDAV_USERNAME=...   # iCloud app-specific username
-export CALDAV_PASSWORD=...   # iCloud app-specific password
+export CALDAV_USERNAME=...   # CalDAV app-specific username
+export CALDAV_PASSWORD=...   # CalDAV app-specific password
 # Generate once: mix phx.gen.secret
 export WHERE_WE_ARE_SECRET_KEY_BASE="..."  # keep stable across upgrades
 

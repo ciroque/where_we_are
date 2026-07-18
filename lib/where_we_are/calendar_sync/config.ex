@@ -159,8 +159,9 @@ defmodule WhereWeAre.CalendarSync.Config do
   defp parse_integer(nil, default), do: default
   defp parse_integer("", default), do: default
 
-  defp parse_integer(value, default) do
-    case Integer.parse(value) do
+  # Trim only for numeric knobs — passwords keep raw whitespace via get_var/1.
+  defp parse_integer(value, default) when is_binary(value) do
+    case value |> String.trim() |> Integer.parse() do
       {int, _} -> int
       :error -> default
     end
@@ -168,9 +169,14 @@ defmodule WhereWeAre.CalendarSync.Config do
 
   defp parse_boolean(nil, default), do: default
   defp parse_boolean("", default), do: default
-  defp parse_boolean(value, _default) when value in ["true", "1"], do: true
-  defp parse_boolean(value, _default) when value in ["false", "0"], do: false
-  defp parse_boolean(_value, default), do: default
+
+  defp parse_boolean(value, default) when is_binary(value) do
+    case String.trim(value) do
+      v when v in ["true", "1"] -> true
+      v when v in ["false", "0"] -> false
+      _ -> default
+    end
+  end
 
   defp normalize_presence(nil), do: nil
 

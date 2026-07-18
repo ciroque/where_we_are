@@ -84,6 +84,23 @@ defmodule WhereWeAre.CalendarSync.ConfigTest do
     assert Config.from_env()[:poll_interval] == :timer.minutes(3)
   end
 
+  test "parses integer knobs with leading/trailing whitespace" do
+    clear_optional_env()
+    dir = System.tmp_dir!() |> Path.join("wwa-caldav-config-#{System.unique_integer([:positive])}")
+    File.mkdir_p!(dir)
+    on_exit(fn -> File.rm_rf(dir) end)
+
+    File.write!(Path.join(dir, "CALDAV_POLL_MINUTES"), "  3  \n")
+    File.write!(Path.join(dir, "CALDAV_EVENT_WINDOW_MONTHS"), "\t12\n")
+    System.put_env("CALDAV_USERNAME", "person@example.com")
+    System.put_env("CALDAV_PASSWORD", "app-specific-password")
+    System.put_env("CALDAV_CONFIG_DIR", dir)
+
+    config = Config.from_env()
+    assert config[:poll_interval] == :timer.minutes(3)
+    assert config[:event_window_months] == 12
+  end
+
   test "prefers config-dir files over env for filter knobs" do
     clear_optional_env()
     dir = System.tmp_dir!() |> Path.join("wwa-caldav-config-#{System.unique_integer([:positive])}")
@@ -142,11 +159,10 @@ defmodule WhereWeAre.CalendarSync.ConfigTest do
     dir = System.tmp_dir!() |> Path.join("wwa-caldav-config-#{System.unique_integer([:positive])}")
     File.mkdir_p!(dir)
     path = Path.join(dir, "CALDAV_CALENDARS")
-    File.write!(path, "FromFile")
-    File.chmod!(path, 0o000)
+    # Force a deterministic read error (not :enoent) — File.read/1 fails with :eisdir.
+    File.mkdir_p!(path)
 
     on_exit(fn ->
-      File.chmod!(path, 0o644)
       File.rm_rf(dir)
       # Drop warn-once flag so later tests aren't affected.
       :persistent_term.erase({WhereWeAre.CalendarSync.Config, :config_read_failed, path})
