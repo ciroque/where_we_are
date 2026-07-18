@@ -23,14 +23,15 @@ Minimal install (ClusterIP only; use `kubectl port-forward` from NOTES):
 
 ```bash
 export DIGEST=<image digest from GHCR, e.g. sha256:...>
-export CALDAV_APP_PASSWORD=...   # iCloud app-specific password
+export CALDAV_USERNAME=...   # iCloud username
+export CALDAV_PASSWORD=...   # iCloud password
 # Generate once: mix phx.gen.secret
 export WHERE_WE_ARE_SECRET_KEY_BASE="..."  # keep stable across upgrades
 
 helm upgrade --install where-we-are ./chart/where-we-are \
   --set app.secretKeyBase="$WHERE_WE_ARE_SECRET_KEY_BASE" \
   --set app.caldav.username="you@icloud.com" \
-  --set app.caldav.password="$CALDAV_APP_PASSWORD" \
+  --set app.caldav.password="$CALDAV_PASSWORD" \
   --set app.caldav.calendars="Family,Home" \
   --set image.digest="$DIGEST" \
   -n where-we-are \
@@ -45,15 +46,16 @@ Public HTTPS with Traefik + cert-manager:
 
 export DIGEST=<image digest from GHCR, e.g. sha256:...>
 export HOST=where-we-are.example.com   # your real DNS name
-export CALDAV_APP_PASSWORD=...   # iCloud app-specific password
+export CALDAV_USERNAME=...   # iCloud app-specific username
+export CALDAV_PASSWORD=...   # iCloud app-specific password
 # Generate once: mix phx.gen.secret
 export WHERE_WE_ARE_SECRET_KEY_BASE="..."  # keep stable across upgrades
 
 helm upgrade --install where-we-are ./chart/where-we-are \
   --set app.secretKeyBase="$WHERE_WE_ARE_SECRET_KEY_BASE" \
   --set app.phxHost="$HOST" \
-  --set app.caldav.username="you@icloud.com" \
-  --set app.caldav.password="$CALDAV_APP_PASSWORD" \
+  --set app.caldav.username="$CALDAV_USERNAME" \
+  --set app.caldav.password="$CALDAV_PASSWORD" \
   --set app.caldav.calendars="Family,Home" \
   --set image.digest="$DIGEST" \
   --set ingress.enabled=true \
@@ -119,11 +121,37 @@ helm delete where-we-are -n where-we-are
 | `app.caldav.username` | CalDAV username | `""` |
 | `app.caldav.password` | CalDAV password / app-specific password | `""` |
 | `app.caldav.url` | CalDAV base URL | iCloud |
-| `app.caldav.calendars` | Comma-separated display names | `""` (all) |
-| `app.caldav.eventWindowMonths` | Fetch window | `6` |
+| `app.caldav.calendars` | Comma-separated display names (ConfigMap; hot-reload) | `""` (all) |
+| `app.caldav.eventWindowMonths` | Fetch window (ConfigMap; hot-reload) | `6` |
 | `app.caldav.expandRecurrences` | Expand RRULEs | `true` |
 | `app.caldav.pollMinutes` | Sync interval | `10` |
 | `app.environment` | `MIX_ENV` | `prod` |
+
+## Calendar filters (ConfigMap, no restart)
+
+`CALDAV_CALENDARS` and `CALDAV_EVENT_WINDOW_MONTHS` are served from a ConfigMap
+named `<fullname>-caldav`, mounted at `/etc/where-we-are/caldav-config`
+(`CALDAV_CONFIG_DIR`). `<fullname>` is the chart fullname (usually the release
+name, e.g. `where-we-are`, or `<release>-where-we-are` if they differ). The app
+re-reads those files on every sync poll.
+
+```bash
+# Via Helm values
+helm upgrade where-we-are ./chart/where-we-are -n where-we-are \
+  --reuse-values \
+  --set app.caldav.calendars="Family,Home" \
+  --set app.caldav.eventWindowMonths=3
+
+# Or edit the live ConfigMap (name from: helm get manifest -n where-we-are where-we-are | grep -A2 'kind: ConfigMap')
+kubectl -n where-we-are edit configmap <fullname>-caldav
+```
+
+Notes:
+
+- kubelet may take up to ~1 minute to refresh mounted files after a ConfigMap edit.
+- The next poll (`app.caldav.pollMinutes`, default 10) applies the new filter.
+- Force sooner: `kubectl -n where-we-are exec deploy/where-we-are -- bin/where_we_are rpc 'WhereWeAre.CalendarSync.sync_now()'`.
+- Auth (`username`/`password`) stays in the Secret and still needs a roll for changes.
 
 ## Notes
 

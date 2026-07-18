@@ -27,15 +27,21 @@ Runtime options are loaded from the environment (`config/runtime.exs` via
 | Variable | Purpose | Default |
 |----------|---------|---------|
 | `CALDAV_USERNAME` | CalDAV username | — |
-| `CALDAV_PASSWORD` | CalDAV app-specific password | — |
+| `CALDAV_PASSWORD` | CalDAV password | — |
 | `CALDAV_URL` | CalDAV base URL | iCloud (`https://caldav.icloud.com`) |
 | `CALDAV_CALENDARS` | Comma-separated calendar display names to include | all calendars |
 | `CALDAV_EVENT_WINDOW_MONTHS` | Months before/after today to fetch | `6` |
 | `CALDAV_EXPAND_RECURRENCES` | Expand recurring events at fetch | `true` |
 | `CALDAV_POLL_MINUTES` | Sync poll interval | `10` |
+| `CALDAV_CONFIG_DIR` | Optional directory of `CALDAV_*` files (ConfigMap mount); re-read filter/window each sync | — |
 | `SECRET_KEY_BASE` | Phoenix secret (required in prod) | — |
 | `PHX_HOST` / `PORT` | Production endpoint host/port | `example.com` / `4000` |
 | `PHX_SERVER` | Set `true` for releases that should listen | — |
+
+When `CALDAV_CONFIG_DIR` is set, files named like the env vars (e.g. `CALDAV_CALENDARS`)
+override the process environment for those keys. The Helm chart mounts a ConfigMap
+there so filter changes apply on the next poll without a pod restart. See
+[chart/where-we-are/README.md](./chart/where-we-are/README.md).
 
 ## Architecture
 
@@ -78,15 +84,16 @@ ingress, cert-manager, and GHCR pull secret `ghcr-package-read`. See
 ```bash
 export DIGEST=sha256:...   # from GHCR / CI
 export HOST=where-we-are.example.com
-export CALDAV_APP_PASSWORD=...   # iCloud app-specific password
+export CALDAV_USERNAME=you@icloud.com   # Apple ID / CalDAV username
+export CALDAV_PASSWORD=...   # iCloud app-specific password
 # Generate once: mix phx.gen.secret
 export WHERE_WE_ARE_SECRET_KEY_BASE="..."  # keep stable across upgrades
 
 helm upgrade --install where-we-are ./chart/where-we-are \
   --set app.secretKeyBase="$WHERE_WE_ARE_SECRET_KEY_BASE" \
   --set app.phxHost="$HOST" \
-  --set app.caldav.username="$CALDAV_APP_USERNAME" \
-  --set app.caldav.password="$CALDAV_APP_PASSWORD" \
+  --set app.caldav.username="$CALDAV_USERNAME" \
+  --set app.caldav.password="$CALDAV_PASSWORD" \
   --set image.digest="$DIGEST" \
   --set ingress.enabled=true \
   --set ingress.hosts[0].host="$HOST" \

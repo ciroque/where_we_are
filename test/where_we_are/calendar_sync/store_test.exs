@@ -31,6 +31,47 @@ defmodule WhereWeAre.CalendarSync.StoreTest do
     assert status.configured_calendars == ["Home"]
   end
 
+  test "apply_runtime_config updates window and clears calendars when filter changes" do
+    store =
+      Store.new(
+        client: WhereWeAre.Calendar.NoopClient,
+        credentials: %{username: "u", password: "secret", calendars: ["Home"]},
+        filter: %{calendars: ["Home"]},
+        event_window_months: 6,
+        initial_calendars: [%{display_name: "Home"}]
+      )
+
+    updated =
+      Store.apply_runtime_config(store,
+        filter: %{calendars: ["Work"]},
+        event_window_months: 3
+      )
+
+    assert updated.filter == %{calendars: ["Work"]}
+    assert updated.event_window_months == 3
+    assert updated.calendars == nil
+    assert updated.credentials.calendars == ["Work"]
+    assert updated.credentials.username == "u"
+
+    same_filter =
+      Store.apply_runtime_config(store,
+        filter: %{calendars: ["Home"]},
+        event_window_months: 12
+      )
+
+    assert same_filter.calendars == [%{display_name: "Home"}]
+    assert same_filter.event_window_months == 12
+
+    cleared =
+      Store.apply_runtime_config(store,
+        filter: %{},
+        event_window_months: 6
+      )
+
+    refute Map.has_key?(cleared.credentials, :calendars)
+    assert Store.configured_calendars(cleared) == []
+  end
+
   test "put_events records sync time and clears errors" do
     store =
       Store.new(client: WhereWeAre.Calendar.NoopClient)
