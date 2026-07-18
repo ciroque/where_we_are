@@ -1,0 +1,14 @@
+# Patterns to ignore when packaging.
+.DS_Store
+# Common VCS dirs
+.git/
+.gitignore
+# CI
+.github/
+# IDE
+.idea/
+*.swp
+*.bak
+*.tmp
+*.orig
+*~

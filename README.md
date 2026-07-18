@@ -68,10 +68,36 @@ mix dialyzer
 
 ## Deployment
 
-- Multi-stage `Dockerfile` builds a release
-- Helm chart under `chart/where-we-are/`
-- Single-node in-memory sync: if you run multiple replicas, use sticky sessions
-  or accept that each pod has its own cache
+Multi-stage `Dockerfile` builds a production release. CI pushes signed images to
+`ghcr.io/ciroque/where_we_are` on merge to `main`.
+
+The Helm chart (`chart/where-we-are/`) uses digest-pinned images, Traefik
+ingress, cert-manager, and GHCR pull secret `ghcr-package-read`. See
+[chart/where-we-are/README.md](./chart/where-we-are/README.md).
+
+```bash
+export DIGEST=sha256:...   # from GHCR / CI
+export HOST=where-we-are.example.com
+export CALDAV_APP_PASSWORD=...   # iCloud app-specific password
+# Generate once: mix phx.gen.secret
+export WHERE_WE_ARE_SECRET_KEY_BASE="..."  # keep stable across upgrades
+
+helm upgrade --install where-we-are ./chart/where-we-are \
+  --set app.secretKeyBase="$WHERE_WE_ARE_SECRET_KEY_BASE" \
+  --set app.phxHost="$HOST" \
+  --set app.caldav.username="you@icloud.com" \
+  --set app.caldav.password="$CALDAV_APP_PASSWORD" \
+  --set image.digest="$DIGEST" \
+  --set ingress.enabled=true \
+  --set ingress.hosts[0].host="$HOST" \
+  --set ingress.tls[0].hosts[0]="$HOST" \
+  --set ingress.tls[0].secretName=where-we-are-tls-secret \
+  --set certificate.enabled=true \
+  --set certificate.dnsNames[0]="$HOST" \
+  -n where-we-are --create-namespace
+```
+
+Keep `replicaCount: 1` — calendar state is in-memory per pod.
 
 ## Refactoring notes
 
