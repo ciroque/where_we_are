@@ -66,10 +66,8 @@ ingress:
       paths:
         - path: /
           pathType: Prefix
-  tls:
-    - hosts:
-        - where-we-are.local
-      secretName: where-we-are-tls-secret
+  # TLS is optional; set this (and optionally certificate.enabled=true) when you have a Secret.
+  tls: []
 
 # Off by default (requires cert-manager CRDs + ClusterIssuer).
 certificate:

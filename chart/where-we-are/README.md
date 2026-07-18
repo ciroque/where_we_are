@@ -22,8 +22,10 @@ For public HTTPS (optional; off by default):
 Minimal install (ClusterIP only; use `kubectl port-forward` from NOTES):
 
 ```bash
-export WHERE_WE_ARE_SECRET_KEY_BASE=<output from `mix phx.gen.secret`; keep stable>
 export DIGEST=<image digest from GHCR, e.g. sha256:...>
+export CALDAV_APP_PASSWORD=...   # iCloud app-specific password
+# Generate once: mix phx.gen.secret
+export WHERE_WE_ARE_SECRET_KEY_BASE="..."  # keep stable across upgrades
 
 helm upgrade --install where-we-are ./chart/where-we-are \
   --set app.secretKeyBase="$WHERE_WE_ARE_SECRET_KEY_BASE" \
@@ -43,7 +45,9 @@ Public HTTPS with Traefik + cert-manager:
 
 export DIGEST=<image digest from GHCR, e.g. sha256:...>
 export HOST=where-we-are.example.com   # your real DNS name
-export WHERE_WE_ARE_SECRET_KEY_BASE=<output from `mix phx.gen.secret`; keep stable>
+export CALDAV_APP_PASSWORD=...   # iCloud app-specific password
+# Generate once: mix phx.gen.secret
+export WHERE_WE_ARE_SECRET_KEY_BASE="..."  # keep stable across upgrades
 
 helm upgrade --install where-we-are ./chart/where-we-are \
   --set app.secretKeyBase="$WHERE_WE_ARE_SECRET_KEY_BASE" \
@@ -55,6 +59,7 @@ helm upgrade --install where-we-are ./chart/where-we-are \
   --set ingress.enabled=true \
   --set ingress.hosts[0].host="$HOST" \
   --set ingress.tls[0].hosts[0]="$HOST" \
+  --set ingress.tls[0].secretName=where-we-are-tls-secret \
   --set certificate.enabled=true \
   --set certificate.dnsNames[0]="$HOST" \
   -n where-we-are \

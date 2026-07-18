@@ -1,5 +1,22 @@
 {{- if .Values.autoscaling.enabled }}
-apiVersion: autoscaling/v2
+{{- $cpuTarget := required "autoscaling.targetCPUUtilizationPercentage is required when autoscaling.enabled is true" .Values.autoscaling.targetCPUUtilizationPercentage }}
+{{- /*
+  Prefer cluster-advertised HPA GVK (kind-qualified; bare group/version is unreliable
+  under `helm template`). Fall back by kube version for offline render / older clusters.
+*/ -}}
+{{- $hpaApi := "autoscaling/v2beta1" -}}
+{{- if .Capabilities.APIVersions.Has "autoscaling/v2/HorizontalPodAutoscaler" -}}
+{{- $hpaApi = "autoscaling/v2" -}}
+{{- else if .Capabilities.APIVersions.Has "autoscaling/v2beta2/HorizontalPodAutoscaler" -}}
+{{- $hpaApi = "autoscaling/v2beta2" -}}
+{{- else if .Capabilities.APIVersions.Has "autoscaling/v2beta1/HorizontalPodAutoscaler" -}}
+{{- $hpaApi = "autoscaling/v2beta1" -}}
+{{- else if semverCompare ">=1.23-0" .Capabilities.KubeVersion.GitVersion -}}
+{{- $hpaApi = "autoscaling/v2" -}}
+{{- else if semverCompare ">=1.12-0" .Capabilities.KubeVersion.GitVersion -}}
+{{- $hpaApi = "autoscaling/v2beta2" -}}
+{{- end }}
+apiVersion: {{ $hpaApi }}
 kind: HorizontalPodAutoscaler
 metadata:
   name: {{ include "where-we-are.fullname" . }}
@@ -13,11 +30,15 @@ spec:
   minReplicas: {{ .Values.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.autoscaling.maxReplicas }}
   metrics:
-    # autoscaling/v2 requires at least one metric; fail loudly if misconfigured.
+    # At least one metric is required; fail loudly if misconfigured (see $cpuTarget).
     - type: Resource
       resource:
         name: cpu
+        {{- if eq $hpaApi "autoscaling/v2beta1" }}
+        targetAverageUtilization: {{ $cpuTarget }}
+        {{- else }}
         target:
           type: Utilization
-          averageUtilization: {{ required "autoscaling.targetCPUUtilizationPercentage is required when autoscaling.enabled is true" .Values.autoscaling.targetCPUUtilizationPercentage }}
+          averageUtilization: {{ $cpuTarget }}
+        {{- end }}
 {{- end }}
