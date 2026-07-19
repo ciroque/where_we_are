@@ -111,7 +111,9 @@ app:
     password: ""
     url: "https://caldav.icloud.com"
     # Comma-separated calendar display names; empty = all calendars.
+    # Served via ConfigMap mount (CALDAV_CONFIG_DIR); edits apply on next sync without restart.
     calendars: ""
+    # Served via ConfigMap mount; edits apply on next sync without restart.
     eventWindowMonths: 6
     expandRecurrences: true
     pollMinutes: 10

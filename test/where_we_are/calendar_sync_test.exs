@@ -4,6 +4,9 @@ defmodule WhereWeAre.CalendarSyncTest do
   alias WhereWeAre.Calendar.Event
   alias WhereWeAre.CalendarSync
 
+  # Hot-reload tests that touch CALDAV_CONFIG_DIR live in
+  # WhereWeAre.CalendarSync.ConfigReloadTest (async: false).
+
   defmodule SuccessfulClient do
     @behaviour WhereWeAre.Calendar.Client
 

@@ -4,6 +4,7 @@ defmodule WhereWeAre.CalendarSync do
   """
   use GenServer
 
+  alias WhereWeAre.CalendarSync.Config
   alias WhereWeAre.CalendarSync.Store
 
   def start_link(opts) do
@@ -101,6 +102,15 @@ defmodule WhereWeAre.CalendarSync do
   end
 
   defp sync(store) do
+    # Re-read filter knobs each sync when a config dir is mounted (K8s ConfigMap).
+    # Without CALDAV_CONFIG_DIR, boot-time opts stay as started (tests / plain env).
+    store =
+      if Config.config_dir_configured?() do
+        Store.apply_runtime_config(store, Config.runtime_sync_opts())
+      else
+        store
+      end
+
     config = Store.client_config(store)
 
     case store.client.fetch_events(config) do

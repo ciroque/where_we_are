@@ -63,6 +63,37 @@ defmodule WhereWeAre.CalendarSync.Store do
     %{store | last_error: reason}
   end
 
+  @doc """
+  Applies reloadable filter/window settings (e.g. after ConfigMap file changes).
+
+  When the calendar name filter changes, clears the cached catalog so the next
+  list/sync re-discovers under the new filter.
+  """
+  def apply_runtime_config(%__MODULE__{} = store, opts) when is_list(opts) do
+    filter = Keyword.get(opts, :filter, store.filter)
+    event_window_months = Keyword.get(opts, :event_window_months, store.event_window_months)
+    filter_changed? = filter != store.filter
+
+    # Keep legacy credentials map aligned (drop stale :calendars when filter clears).
+    credentials =
+      store.credentials
+      |> Map.drop([:calendars])
+      |> Map.merge(filter)
+
+    store = %{
+      store
+      | filter: filter,
+        event_window_months: event_window_months,
+        credentials: credentials
+    }
+
+    if filter_changed? do
+      %{store | calendars: nil, events: []}
+    else
+      store
+    end
+  end
+
   def events_for_month(%__MODULE__{events: events}, month_start, timezone \\ "Etc/UTC") do
     Window.events_for_month(events, month_start, timezone)
   end
