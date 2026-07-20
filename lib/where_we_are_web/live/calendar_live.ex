@@ -18,7 +18,11 @@ defmodule WhereWeAreWeb.CalendarLive do
 
   @impl true
   def mount(params, session, socket) do
-    timezone = Assigns.resolve_timezone(session)
+    # Prefer browser timezone from LiveSocket connect params (set in app.js) so
+    # the first *connected* mount converts correctly. Cookie-backed session["tz"]
+    # is only available after a prior full page load.
+    connect_params = if connected?(socket), do: get_connect_params(socket), else: nil
+    timezone = Assigns.resolve_timezone(session, connect_params)
     today = DateTime.now!(timezone) |> DateTime.to_date()
     displayed_month = Assigns.resolve_displayed_month(params, today)
     calendar_sync = Assigns.resolve_calendar_sync(session)

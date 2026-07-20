@@ -10,6 +10,16 @@ defmodule WhereWeAreWeb.Calendar.AssignsTest do
     assert Assigns.resolve_timezone(%{}) == "Etc/UTC"
   end
 
+  test "resolve_timezone prefers connect params over the session cookie" do
+    assert Assigns.resolve_timezone(%{"tz" => "Etc/UTC"}, %{"timezone" => "America/Denver"}) ==
+             "America/Denver"
+
+    assert Assigns.resolve_timezone(%{"tz" => "America/Denver"}, %{}) == "America/Denver"
+    assert Assigns.resolve_timezone(%{}, %{"timezone" => "Not/AZone"}) == "Etc/UTC"
+    assert Assigns.resolve_timezone(%{}, nil) == "Etc/UTC"
+    assert Assigns.resolve_timezone(%{"tz" => "America/Denver"}, :not_a_map) == "America/Denver"
+  end
+
   test "resolve_displayed_month parses month and today params" do
     today = ~D[2024-06-15]
     assert Assigns.resolve_displayed_month(%{"month" => "2024-03-20"}, today) == ~D[2024-03-01]
