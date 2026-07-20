@@ -22,10 +22,24 @@ import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import topbar from "../vendor/topbar"
 
-let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
+const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
+const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+const cookieAttrs =
+  ";path=/;max-age=31536000;SameSite=Lax" +
+  (location.protocol === "https:" ? ";Secure" : "")
+
+// Persist browser timezone for dead renders / full page loads. LiveView also
+// receives it via connect params so the first connected mount converts times
+// correctly without requiring a second full reload (important in production).
+// IANA names are cookie-safe (letters, digits, _, /, +,-). Do not URI-encode:
+// a literal "/" must reach the server for DateTime.now/1 validation.
+if (browserTimezone) {
+  document.cookie = "tz=" + browserTimezone + cookieAttrs
+}
+
 let liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
-  params: {_csrf_token: csrfToken}
+  params: {_csrf_token: csrfToken, timezone: browserTimezone}
 })
 
 // Show progress bar on live navigation and form submits
@@ -35,7 +49,8 @@ window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
 
 // Persist calendar selections to a cookie when toggled
 window.addEventListener("phx:persist_calendars", (e) => {
-  document.cookie = "selected_calendars=" + encodeURIComponent(e.detail.value) + ";path=/;max-age=31536000"
+  document.cookie =
+    "selected_calendars=" + encodeURIComponent(e.detail.value) + cookieAttrs
 })
 
 // connect if there are any LiveViews on the page

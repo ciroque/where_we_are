@@ -3,14 +3,34 @@ defmodule WhereWeAreWeb.Calendar.Assigns do
   Helpers for building CalendarLive assigns from params/session.
   """
 
-  def resolve_timezone(%{"tz" => tz}) when is_binary(tz) and tz != "" do
+  @doc """
+  Resolve a valid IANA timezone from LiveView session and/or connect params.
+
+  Prefer connect-params (`timezone`) when present so the first connected mount
+  uses the browser zone without waiting for a cookie round-trip. Fall back to
+  the `tz` cookie value carried in the live session, then UTC.
+  """
+  def resolve_timezone(session, connect_params \\ nil)
+
+  def resolve_timezone(session, connect_params) when is_map(session) or is_nil(session) do
+    session = session || %{}
+    connect_params = if is_map(connect_params), do: connect_params, else: %{}
+
+    [connect_params["timezone"], session["tz"]]
+    |> Enum.find(&(is_binary(&1) and &1 != ""))
+    |> validate_timezone()
+  end
+
+  def resolve_timezone(_session, _connect_params), do: "Etc/UTC"
+
+  defp validate_timezone(nil), do: "Etc/UTC"
+
+  defp validate_timezone(tz) when is_binary(tz) do
     case DateTime.now(tz) do
       {:ok, _} -> tz
       _ -> "Etc/UTC"
     end
   end
-
-  def resolve_timezone(_session), do: "Etc/UTC"
 
   def resolve_displayed_month(%{"month" => month_param}, today),
     do: parse_month(month_param, today)

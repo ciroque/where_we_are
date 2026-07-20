@@ -32,7 +32,7 @@ helm upgrade --install where-we-are ./chart/where-we-are \
   --set app.secretKeyBase="$WHERE_WE_ARE_SECRET_KEY_BASE" \
   --set app.caldav.username="$CALDAV_USERNAME" \
   --set app.caldav.password="$CALDAV_PASSWORD" \
-  --set app.caldav.calendars="Family,Home" \
+  --set 'app.caldav.calendars=Family\,Home' \
   --set image.digest="$DIGEST" \
   -n where-we-are \
   --create-namespace
@@ -56,7 +56,7 @@ helm upgrade --install where-we-are ./chart/where-we-are \
   --set app.phxHost="$HOST" \
   --set app.caldav.username="$CALDAV_USERNAME" \
   --set app.caldav.password="$CALDAV_PASSWORD" \
-  --set app.caldav.calendars="Family,Home" \
+  --set 'app.caldav.calendars=Family\,Home' \
   --set image.digest="$DIGEST" \
   --set ingress.enabled=true \
   --set ingress.hosts[0].host="$HOST" \
@@ -139,7 +139,7 @@ re-reads those files on every sync poll.
 # Via Helm values
 helm upgrade where-we-are ./chart/where-we-are -n where-we-are \
   --reuse-values \
-  --set app.caldav.calendars="Family,Home" \
+  --set 'app.caldav.calendars=Family\,Home' \
   --set app.caldav.eventWindowMonths=3
 
 # Or edit the live ConfigMap (name from: helm get manifest -n where-we-are where-we-are | grep -A2 'kind: ConfigMap')
@@ -148,6 +148,7 @@ kubectl -n where-we-are edit configmap <fullname>-caldav
 
 Notes:
 
+- **Helm `--set` treats commas as separators.** Escape them: `Family\,Primary\,Steve`, or use a values file / `kubectl edit configmap`.
 - kubelet may take up to ~1 minute to refresh mounted files after a ConfigMap edit.
 - The next poll (`app.caldav.pollMinutes`, default 10) applies the new filter.
 - Force sooner: `kubectl -n where-we-are exec deploy/where-we-are -- bin/where_we_are rpc 'WhereWeAre.CalendarSync.sync_now()'`.
