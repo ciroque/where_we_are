@@ -88,12 +88,14 @@ export CALDAV_USERNAME=...   # CalDAV username
 export CALDAV_PASSWORD=...   # CalDAV password
 # Generate once: mix phx.gen.secret
 export WHERE_WE_ARE_SECRET_KEY_BASE="..."  # keep stable across upgrades
+export ACTIVE_CALENDARS="Family\,Home" # NOTE: Commas must be escaped!
 
 helm upgrade --install where-we-are ./chart/where-we-are \
   --set app.secretKeyBase="$WHERE_WE_ARE_SECRET_KEY_BASE" \
   --set app.phxHost="$HOST" \
   --set app.caldav.username="$CALDAV_USERNAME" \
   --set app.caldav.password="$CALDAV_PASSWORD" \
+  --set app.caldav.calendars="$ACTIVE_CALENDARS" \
   --set image.digest="$DIGEST" \
   --set ingress.enabled=true \
   --set ingress.hosts[0].host="$HOST" \
@@ -101,7 +103,8 @@ helm upgrade --install where-we-are ./chart/where-we-are \
   --set ingress.tls[0].secretName=where-we-are-tls-secret \
   --set certificate.enabled=true \
   --set certificate.dnsNames[0]="$HOST" \
-  -n where-we-are --create-namespace
+  -n where-we-are \
+  --create-namespace
 ```
 
 Keep `replicaCount: 1` — calendar state is in-memory per pod.
