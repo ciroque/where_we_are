@@ -152,10 +152,45 @@ Notes:
 - kubelet may take up to ~1 minute to refresh mounted files after a ConfigMap edit.
 - The next poll (`app.caldav.pollMinutes`, default 10) applies the new filter.
 - Force sooner: `kubectl -n where-we-are exec deploy/where-we-are -- bin/where_we_are rpc 'WhereWeAre.CalendarSync.sync_now()'`.
-- Auth (`username`/`password`) stays in the Secret and still needs a roll for changes.
+- Auth (`username`/`password`) stays in the Secret and still needs a roll for changes. See [iCloud app-specific password](#icloud-app-specific-password).
+
+## iCloud app-specific password
+
+An [app-specific password](https://support.apple.com/en-us/102654) should be used, do not use your Apple ID password. 
+
+> Note: Changing or resetting the Apple Account password revokes all of the App-Specfic Passwords.
+
+### Create one
+
+To create an App-Specific Password:
+
+1. Sign in at [account.apple.com](https://account.apple.com).
+2. Open **Sign-In and Security**.
+3. Select **App-Specific Passwords**.
+4. Generate a password and label it, for example `where-we-are`.
+
+Apple shows the password once, as `xxxx-xxxx-xxxx-xxxx`. Copy it then. 
+
+On iPhone or iPad: **Settings → [your name] → Sign-In & Security → App-Specific Passwords**.
+
+### Update it outside Argo CD
+
+Argo CD renders this chart and applies it. There is no Helm release, so `helm upgrade --set app.caldav.password=...` does not update prod. The Application in `ciroque-gitops` omits `app.caldav.username` and `app.caldav.password` on purpose, and `app.secretKeyBase` is the placeholder `__managed-out-of-band__`. `ignoreDifferences` on Secret `where-we-are` `/data`, with `RespectIgnoreDifferences=true`, keeps a sync from writing those keys. Put the new password in the live Secret, then restart so the pod reads `CALDAV_PASSWORD` again:
+
+```bash
+read -s CALDAV_PASSWORD
+export CALDAV_PASSWORD
+
+kubectl -n where-we-are patch secret where-we-are --type merge \
+  -p "{\"stringData\":{\"caldav-password\":\"$CALDAV_PASSWORD\"}}"
+
+kubectl -n where-we-are rollout restart deployment/where-we-are
+kubectl -n where-we-are rollout status deployment/where-we-are
+```
+
+`stringData` changes only `caldav-password`. Replacing the Secret object would drop `caldav-username` and `secret-key-base`. Do not remove the `/data` ignore to push the password through Helm values. The next sync would overwrite `secret-key-base` with the placeholder.
 
 ## Notes
 
 - **Single replica**: sync state is per-pod memory.
-- **iCloud**: use an [app-specific password](https://support.apple.com/en-us/HT204397).
 - **LiveView**: `app.phxHost` must match the Ingress hostname.
